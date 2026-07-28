@@ -1,12 +1,15 @@
 import { useState } from 'react'
+import { getDocs, query, where } from 'firebase/firestore'
 import { DndContext, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { useRounds } from '../../hooks/useRounds'
 import { useRoundMatches } from '../../hooks/useMatches'
 import { useFighters } from '../../hooks/useFighters'
+import { useLeaderboard } from '../../hooks/useLeaderboard'
 import { generatePairings, pairKey } from '../../utils/pairing'
-import { assignControlBody, computeRoleStats, getCandidatesForReroll } from '../../utils/controlBody'
-import { generateRound, activateMatch, updateMatchControlBody } from '../../firebase/writes'
+import { assignControlBody, getCandidatesForReroll } from '../../utils/controlBody'
+import { generateRound, activateMatch, updateMatchControlBody, registerBye } from '../../firebase/writes'
 import { calcCalibrationPoints } from '../../utils/scoring'
+import { matchesRef } from '../../firebase/db'
 import ArenaDropZone from './ArenaDropZone'
 import MatchCard from './MatchCard'
 import styles from './Scheduler.module.css'
@@ -17,6 +20,7 @@ export default function Scheduler({ onRoundComplete }) {
   const { currentRound, nextRoundNumber } = useRounds()
   const { matches, loading: matchesLoading } = useRoundMatches(currentRound?.id)
   const { fighters, activeFighters, fightersMap } = useFighters()
+  const { leaderboard } = useLeaderboard()
   const [generating, setGenerating] = useState(false)
   const [activeCard, setActiveCard] = useState(null)
 
@@ -60,18 +64,23 @@ export default function Scheduler({ onRoundComplete }) {
     if (generating) return
     setGenerating(true)
     try {
-      // Construir set de pares pasados
-      // (simplificado: en producción debería consultar Firestore para historia completa)
-      const pastPairs = new Set()
-
-      const { pairs, byeFighterId } = generatePairings(
-        activeFighters.map((f) => ({
-          ...f,
-          total_points: 0, // TODO: cargar desde leaderboard
-          bye_count: 0,    // TODO: cargar desde leaderboard
-        })),
-        pastPairs
+      // Construir set de pares pasados desde Firestore (antirepetición real)
+      const completedSnap = await getDocs(
+        query(matchesRef, where('status', '==', 'complete'))
       )
+      const pastPairs = new Set(
+        completedSnap.docs.map((d) => pairKey(d.data().fighter_red_id, d.data().fighter_blue_id))
+      )
+
+      // Mergear datos de leaderboard (total_points, bye_count) con fighters
+      const leaderMap = Object.fromEntries(leaderboard.map((e) => [e.id, e]))
+      const enrichedFighters = activeFighters.map((f) => ({
+        ...f,
+        total_points: leaderMap[f.id]?.total_points ?? 0,
+        bye_count: leaderMap[f.id]?.bye_count ?? 0,
+      }))
+
+      const { pairs, byeFighterId } = generatePairings(enrichedFighters, pastPairs)
 
       // Asignar cuerpo de control
       const roleStats = {}
@@ -96,7 +105,18 @@ export default function Scheduler({ onRoundComplete }) {
         return { red, blue, ...(cb ?? {}), sameClubWarning: cb?.sameClubWarning ?? false }
       })
 
-      await generateRound(nextRoundNumber, enrichedPairs)
+      const roundId = await generateRound(nextRoundNumber, enrichedPairs)
+
+      // Registrar bye si el algoritmo asignó uno
+      if (byeFighterId) {
+        // Calibration = promedio de puntos finales de matches de la ronda que acaba de cerrar
+        const lastRoundPoints = completedSnap.docs
+          .filter((d) => d.data().round_id === currentRound?.id)
+          .flatMap((d) => [d.data().final_score_red, d.data().final_score_blue])
+          .filter((v) => typeof v === 'number')
+        const calibrationPts = calcCalibrationPoints(lastRoundPoints)
+        await registerBye(byeFighterId, roundId, calibrationPts)
+      }
     } finally {
       setGenerating(false)
     }
