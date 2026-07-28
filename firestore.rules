@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Config (solo lectura pública, escritura solo admin autenticado) ──────
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if false; // Editar solo desde Firebase Console / seed script
+    }
+
+    // ── Fighters ─────────────────────────────────────────────────────────────
+    match /fighters/{fighterId} {
+      allow read: if true;
+      // Solo se permiten updates al gear (tier, weapon) — no creación/borrado desde cliente
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['tier', 'weapon']);
+      allow create, delete: if false;
+    }
+
+    // ── Rounds ───────────────────────────────────────────────────────────────
+    match /rounds/{roundId} {
+      allow read: if true;
+      allow create: if isValidRound(request.resource.data);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['status', 'completed_at']);
+      allow delete: if false;
+    }
+
+    // ── Matches ──────────────────────────────────────────────────────────────
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create: if isValidMatch(request.resource.data);
+      allow update: if isValidMatchUpdate(request.resource.data, resource.data);
+      allow delete: if false;
+
+      // Exchanges (subcollección — solo append, no borrado)
+      match /exchanges/{exchangeId} {
+        allow read: if true;
+        allow create: if isValidExchange(request.resource.data);
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Leaderboard ──────────────────────────────────────────────────────────
+    match /leaderboard/{fighterId} {
+      allow read: if true;
+      // Solo se permite update incremental de campos numéricos
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['total_points', 'matches_complete', 'bye_count']);
+      allow create, delete: if false;
+    }
+
+    // ── Byes ─────────────────────────────────────────────────────────────────
+    match /byes/{byeId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasAll(['fighter_id', 'round_id', 'calibration_points']);
+      allow update, delete: if false;
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    function isValidRound(data) {
+      return data.keys().hasAll(['round_number', 'status', 'started_at'])
+          && data.round_number is int
+          && data.round_number > 0
+          && data.status in ['active', 'complete'];
+    }
+
+    function isValidMatch(data) {
+      return data.keys().hasAll(['round_id', 'fighter_red_id', 'fighter_blue_id', 'status', 'match_number'])
+          && data.status == 'pending'
+          && data.fighter_red_id != data.fighter_blue_id;
+    }
+
+    function isValidMatchUpdate(newData, oldData) {
+      let changed = newData.diff(oldData).affectedKeys();
+      // Activación: asignar arena
+      let activationKeys = ['status', 'arena', 'activated_at'].toSet();
+      // Cierre: resultado final
+      let completionKeys = ['status', 'final_score_red', 'final_score_blue', 'winner_id',
+                            'ended_early', 'ended_by_depletion'].toSet();
+      // Cancelación
+      let cancellationKeys = ['status'].toSet();
+      // Control body update
+      let controlBodyKeys = ['referee_id', 'judge_1_id', 'judge_2_id',
+                              'same_club_warning', 'rerolled'].toSet();
+      return changed.hasOnly(activationKeys)
+          || changed.hasOnly(completionKeys)
+          || changed.hasOnly(cancellationKeys)
+          || changed.hasOnly(controlBodyKeys);
+    }
+
+    function isValidExchange(data) {
+      return data.keys().hasAll(['type', 'round_number'])
+          && data.type in ['normal', 'invalid', 'contrapaso', 'double', 'bye'];
+    }
+  }
+}
