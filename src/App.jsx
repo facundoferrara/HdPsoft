@@ -7,10 +7,10 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/admin"   element={<Admin />} />
         <Route path="/display" element={<Display />} />
-        <Route path="/stats" element={<Stats />} />
-        <Route path="*" element={<Navigate to="/display" replace />} />
+        <Route path="/stats"   element={<Stats />} />
+        <Route path="*"        element={<Navigate to="/display" replace />} />
       </Routes>
     </BrowserRouter>
   )
