@@ -53,6 +53,7 @@ export default function Scheduler({ onRoundComplete }) {
     if (!over) return
     const matchId = active.id
     const arena = Number(over.id)
+    if (!arena || arena < 1 || arena > 4) return
     const match = matches.find((m) => m.id === matchId)
     if (!match || match.status !== 'pending' || isBlocked(match)) return
     await activateMatch(matchId, arena)
@@ -64,9 +65,12 @@ export default function Scheduler({ onRoundComplete }) {
     if (generating) return
     setGenerating(true)
     try {
-      // Construir set de pares pasados desde Firestore (antirepetición real)
+      // Capturar la ronda actual ANTES de generar la nueva (evita race condition con onSnapshot)
+      const prevRoundId = currentRound?.id
+
+      // Construir set de pares pasados desde Firestore — incluye cancelled (antirepetición real)
       const completedSnap = await getDocs(
-        query(matchesRef, where('status', '==', 'complete'))
+        query(matchesRef, where('status', 'in', ['complete', 'cancelled']))
       )
       const pastPairs = new Set(
         completedSnap.docs.map((d) => pairKey(d.data().fighter_red_id, d.data().fighter_blue_id))
@@ -109,9 +113,9 @@ export default function Scheduler({ onRoundComplete }) {
 
       // Registrar bye si el algoritmo asignó uno
       if (byeFighterId) {
-        // Calibration = promedio de puntos finales de matches de la ronda que acaba de cerrar
+        // Calibration = promedio de puntos finales de la ronda que acaba de cerrar (prevRoundId)
         const lastRoundPoints = completedSnap.docs
-          .filter((d) => d.data().round_id === currentRound?.id)
+          .filter((d) => d.data().round_id === prevRoundId)
           .flatMap((d) => [d.data().final_score_red, d.data().final_score_blue])
           .filter((v) => typeof v === 'number')
         const calibrationPts = calcCalibrationPoints(lastRoundPoints)
@@ -132,7 +136,10 @@ export default function Scheduler({ onRoundComplete }) {
     ]
     const candidates = getCandidatesForReroll(fighters, [...busyIds], matchFighterIds)
     const cb = assignControlBody(candidates, matchFighterClubs)
-    if (!cb) return
+    if (!cb) {
+      alert('No hay suficientes árbitros disponibles para hacer reroll.')
+      return
+    }
     await updateMatchControlBody(match.id, cb)
   }
 

@@ -93,13 +93,9 @@ function applyClubSwaps(pairs, pastPairs) {
           !pastPairs.has(pairKey(p.blue.id, q.blue.id))
 
         if (swap1Valid) {
-          // Swap: p.red con q.red
           const tmp = p.red
-          pairs[i] = assignColors(tmp, p.blue)
-          pairs[j] = assignColors(q.red, q.blue)
-          // Re-asignar colores al azar en el par swapeado
-          pairs[i] = assignColors(tmp, q.red)   // ex-red[i] con ex-red[j]
-          pairs[j] = assignColors(p.blue, q.blue)
+          pairs[i] = assignColors(tmp, q.red)    // ex-red[i] con ex-red[j]
+          pairs[j] = assignColors(p.blue, q.blue) // ex-blue[i] con ex-blue[j]
           break
         }
       }

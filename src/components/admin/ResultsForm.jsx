@@ -106,9 +106,9 @@ function computeDelta(exch, scoreRed, scoreBlue, zoneValues, selfDisarmBase) {
     }
   }
 
-  // Penalizaciones: anulan acciones del infractor, mantienen las del oponente
+  // Penalizaciones: amarilla y roja anulan la acción ofensiva del infractor
   for (const pen of exch.penalties) {
-    if (pen.type === 'yellow') {
+    if (pen.type === 'yellow' || pen.type === 'red') {
       if (pen.fighter === 'red') {
         // Anular acción ofensiva de rojo (el delta de azul se revierte)
         if (exch.first_hit?.fighter === 'red') deltaBlue = 0
