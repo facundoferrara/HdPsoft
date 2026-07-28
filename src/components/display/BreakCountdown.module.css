@@ -1,0 +1,29 @@
+.pause {
+  font-size: 4rem;
+  font-weight: 700;
+  text-align: center;
+  color: #f5a623;
+  letter-spacing: 0.05em;
+}
+
+.countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 1.5rem;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.timer {
+  font-size: 6rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #f5a623;
+  line-height: 1;
+}
