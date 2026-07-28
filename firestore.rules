@@ -12,10 +12,11 @@ service cloud.firestore {
     // ── Fighters ─────────────────────────────────────────────────────────────
     match /fighters/{fighterId} {
       allow read: if true;
-      // Solo se permiten updates al gear (tier, weapon) — no creación/borrado desde cliente
+      // Creación y borrado permitidos (operaciones de padrón pre-evento via seed/import)
+      allow create, delete: if true;
+      // Solo se permiten updates al gear (tier, weapon) — no edición de identidad desde cliente
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['tier', 'weapon']);
-      allow create, delete: if false;
     }
 
     // ── Rounds ───────────────────────────────────────────────────────────────
@@ -45,10 +46,11 @@ service cloud.firestore {
     // ── Leaderboard ──────────────────────────────────────────────────────────
     match /leaderboard/{fighterId} {
       allow read: if true;
+      // Creación y borrado permitidos (operaciones de padrón pre-evento via seed/import)
+      allow create, delete: if true;
       // Solo se permite update incremental de campos numéricos
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['total_points', 'matches_complete', 'bye_count']);
-      allow create, delete: if false;
     }
 
     // ── Byes ─────────────────────────────────────────────────────────────────
