@@ -3,10 +3,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Config (solo lectura pública, escritura solo admin autenticado) ──────
+    // ── Config (lectura pública, escritura permitida para seed/setup pre-evento) ──────
     match /config/{doc} {
       allow read: if true;
-      allow write: if false; // Editar solo desde Firebase Console / seed script
+      allow write: if true; // Solo se modifica vía seed/import antes del evento o desde Console
     }
 
     // ── Fighters ─────────────────────────────────────────────────────────────

@@ -144,10 +144,10 @@ function rowToFighter(row) {
   const eventos = row['Seleccione los eventos en que va a participar'] ?? ''
   const participaTorneo = eventos.includes(TORNEO_15) || eventos.trim().toLowerCase() === 'ambos'
 
-  // tier: si no participa del torneo, 'na'; sino mapear desde categoría
-  const tier = participaTorneo
-    ? parseTier(row['Categoría de equipo pretendida'] ?? '')
-    : 'na'
+  // Si no participa del torneo del 15/08, no pertenece al sistema
+  if (!participaTorneo) return null
+
+  const tier = parseTier(row['Categoría de equipo pretendida'] ?? '')
 
   const role = parseRole(row['Rol en Cuerpo de Control'] ?? '')
 
@@ -190,7 +190,7 @@ async function importRoster() {
   const raw = readFileSync(resolve(tsvPath), 'utf8')
   const rows = parseTSV(raw)
 
-  const fighters = rows.map(rowToFighter)
+  const fighters = rows.map(rowToFighter).filter(Boolean)
 
   // Resumen antes de escribir
   const byTier = fighters.reduce((acc, f) => {
