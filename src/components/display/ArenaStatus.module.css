@@ -80,8 +80,14 @@
   color: #666;
 }
 
-.idle {
+.idleLabel {
   font-size: 1.2rem;
   color: #555;
   font-style: italic;
+}
+
+.referee {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.2rem;
 }

@@ -1,0 +1,65 @@
+.zone {
+  flex: 1;
+  min-width: 200px;
+  border-radius: 10px;
+  padding: 1rem;
+  border: 2px dashed #333;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.empty {
+  background: #111;
+  border-style: dashed;
+}
+
+.occupied {
+  background: #0a1e2a;
+  border-color: #00bcd4;
+  border-style: solid;
+}
+
+.over {
+  background: #0e2535;
+  border-color: #4dd0e1;
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #666;
+}
+
+.occupied .label { color: #00bcd4; }
+
+.matchInfo { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.tier {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #00bcd4;
+  letter-spacing: 0.08em;
+}
+
+.fighters {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.red { color: #ef5350; font-weight: 600; font-size: 0.9rem; }
+.blue { color: #42a5f5; font-weight: 600; font-size: 0.9rem; }
+.vs { color: #444; font-size: 0.75rem; }
+
+.placeholder {
+  color: #444;
+  font-size: 0.85rem;
+  font-style: italic;
+  margin-top: auto;
+}

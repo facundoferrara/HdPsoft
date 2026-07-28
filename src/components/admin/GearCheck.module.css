@@ -1,0 +1,100 @@
+.page { display: flex; flex-direction: column; gap: 1.5rem; }
+.loading { color: #666; padding: 2rem; }
+
+.summary {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  background: #1e3a1e;
+  color: #81c784;
+  border: 1px solid #2a4a2a;
+}
+
+.chipPending {
+  background: #3a2a0a;
+  color: #f5a623;
+  border-color: #4a3a1a;
+}
+
+.chipAbsent {
+  background: #2a1a1a;
+  color: #888;
+  border-color: #3a2a2a;
+}
+
+.clubSection { margin-bottom: 0.5rem; }
+
+.clubName {
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #888;
+  margin: 0 0 0.5rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th {
+  text-align: left;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid #2a2a2a;
+  color: #666;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.rowPending td { color: #f5a623; }
+.rowAbsent td { color: #555; }
+.rowActive td { color: #e0e0e0; }
+
+.name { font-weight: 500; }
+.role { color: #888; font-size: 0.82rem; }
+
+.tierSelect {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.tier_tbd { border-color: #f5a623; color: #f5a623; }
+.tier_boffer { border-color: #42a5f5; color: #42a5f5; }
+.tier_nylon { border-color: #ab47bc; color: #ab47bc; }
+.tier_acero { border-color: #81c784; color: #81c784; }
+.tier_na { border-color: #555; color: #555; }
+
+.weaponInput {
+  background: #111;
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  color: #ccc;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  width: 140px;
+}
+
+.weaponInput:focus {
+  outline: none;
+  border-color: #444;
+}
