@@ -37,8 +37,16 @@
 }
 .breakBtn:hover { background: #253525; }
 
+.cancelBtn {
+  background: #2a1e1e;
+  border-color: #ef5350;
+  color: #ef5350;
+}
+.cancelBtn:hover { background: #3a2525; }
+
 .arenas {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
 }
 

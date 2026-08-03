@@ -23,11 +23,7 @@ export default function GearCheck() {
   }
 
   async function handleTierChange(fighter, tier) {
-    await updateFighterGear(fighter.id, tier, fighter.weapon)
-  }
-
-  async function handleWeaponBlur(fighter, weapon) {
-    await updateFighterGear(fighter.id, fighter.tier, weapon)
+    await updateFighterGear(fighter.id, tier)
   }
 
   return (
@@ -47,7 +43,6 @@ export default function GearCheck() {
                 <th>Nombre</th>
                 <th>Rol</th>
                 <th>Tier</th>
-                <th>Arma propia</th>
               </tr>
             </thead>
             <tbody>
@@ -72,17 +67,6 @@ export default function GearCheck() {
                         <option key={t} value={t}>{TIER_LABELS[t]}</option>
                       ))}
                     </select>
-                  </td>
-                  <td>
-                    {f.tier !== 'na' && (
-                      <input
-                        className={styles.weaponInput}
-                        type="text"
-                        defaultValue={f.weapon || ''}
-                        placeholder="Fallback CDS"
-                        onBlur={(e) => handleWeaponBlur(f, e.target.value)}
-                      />
-                    )}
                   </td>
                 </tr>
               ))}

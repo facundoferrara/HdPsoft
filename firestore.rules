@@ -16,7 +16,7 @@ service cloud.firestore {
       allow create, delete: if true;
       // Solo se permiten updates al gear (tier, weapon) — no edición de identidad desde cliente
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
-                       .hasOnly(['tier', 'weapon']);
+                       .hasOnly(['tier']);
     }
 
     // ── Rounds ───────────────────────────────────────────────────────────────

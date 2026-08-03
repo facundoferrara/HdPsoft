@@ -162,10 +162,20 @@ export async function registerBye(fighterId, roundId, calibrationPoints) {
   await batch.commit()
 }
 
-// ── Gear Check ────────────────────────────────────────────────────────────────
+// ── Anular ronda ─────────────────────────────────────────────────────────────
 
-export async function updateFighterGear(fighterId, tier, weapon) {
-  await updateDoc(doc(db, 'fighters', fighterId), { tier, weapon: weapon || null })
+/** Cancela todos los matches pendientes de una ronda y marca la ronda como cancelada. */
+export async function cancelRound(roundId, matchIds) {
+  const batch = writeBatch(db)
+  matchIds.forEach((id) => batch.update(doc(db, 'matches', id), { status: 'cancelled' }))
+  batch.update(doc(db, 'rounds', roundId), { status: 'cancelled', completed_at: serverTimestamp() })
+  await batch.commit()
+}
+
+// ── Gear Check ───────────────────────────────────────────────────────────────────
+
+export async function updateFighterGear(fighterId, tier) {
+  await updateDoc(doc(db, 'fighters', fighterId), { tier })
 }
 
 // ── Estado del evento ─────────────────────────────────────────────────────────

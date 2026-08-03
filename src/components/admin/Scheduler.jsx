@@ -7,7 +7,7 @@ import { useFighters } from '../../hooks/useFighters'
 import { useLeaderboard } from '../../hooks/useLeaderboard'
 import { generatePairings, pairKey } from '../../utils/pairing'
 import { assignControlBody, getCandidatesForReroll } from '../../utils/controlBody'
-import { generateRound, activateMatch, updateMatchControlBody, registerBye } from '../../firebase/writes'
+import { generateRound, activateMatch, updateMatchControlBody, registerBye, cancelRound } from '../../firebase/writes'
 import { calcCalibrationPoints } from '../../utils/scoring'
 import { matchesRef } from '../../firebase/db'
 import ArenaDropZone from './ArenaDropZone'
@@ -126,6 +126,15 @@ export default function Scheduler({ onRoundComplete }) {
     }
   }
 
+  // ── Anular ronda ───────────────────────────────────────────────────────────
+
+  async function handleCancelRound() {
+    if (!currentRound) return
+    if (!window.confirm(`¿Anular Ronda ${currentRound.round_number}? Se cancelarán todos sus asaltos.`)) return
+    const pendingIds = matches.filter((m) => m.status === 'pending').map((m) => m.id)
+    await cancelRound(currentRound.id, pendingIds)
+  }
+
   // ── Reroll ─────────────────────────────────────────────────────────────────
 
   async function handleReroll(match) {
@@ -163,6 +172,11 @@ export default function Scheduler({ onRoundComplete }) {
             disabled={generating || activeFighters.length < 4}
           >
             {generating ? 'Generando...' : `Generar Ronda ${nextRoundNumber}`}
+          </button>
+        )}
+        {currentRound && !allDone && matches.every((m) => m.status === 'pending') && (
+          <button className={`${styles.generateBtn} ${styles.cancelBtn}`} onClick={handleCancelRound}>
+            Anular ronda
           </button>
         )}
         {allDone && matches.length > 0 && (

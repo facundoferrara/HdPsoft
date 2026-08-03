@@ -161,7 +161,6 @@ function rowToFighter(row) {
     name,
     club,
     tier,
-    weapon: null, // Se completa en Gear Check el día del evento
     role,
     ...(hasMedicalNote ? { medical_note: true } : {}),
   }

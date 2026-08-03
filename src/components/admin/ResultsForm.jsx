@@ -237,7 +237,7 @@ export default function ResultsForm() {
             const b = fightersMap[m.fighter_blue_id]
             return (
               <button key={m.id} className={styles.matchOption} onClick={() => selectMatch(m.id)}>
-                <span className={styles.arena}>Arena {m.arena}</span>
+                <span className={styles.arena}>#{m.match_number} · Arena {m.arena}</span>
                 <span className={styles.redName}>{r?.name ?? '—'}</span>
                 <span className={styles.vs}>vs</span>
                 <span className={styles.blueName}>{b?.name ?? '—'}</span>
