@@ -36,26 +36,6 @@ export function assignControlBody(candidates, fighterClubs, roleStats = {}) {
 }
 
 /**
- * Computa estadísticas de roles para los asaltos ya generados en la ronda.
- * Usado para distribución equitativa.
- */
-export function computeRoleStats(matches) {
-  const stats = {}
-  const update = (id, role) => {
-    if (!id) return
-    if (!stats[id]) stats[id] = { refCount: 0, judgeCount: 0 }
-    if (role === 'ref') stats[id].refCount++
-    else stats[id].judgeCount++
-  }
-  for (const m of matches) {
-    update(m.referee_id, 'ref')
-    update(m.judge_1_id, 'judge')
-    update(m.judge_2_id, 'judge')
-  }
-  return stats
-}
-
-/**
  * Genera candidatos para un reroll de cuerpo de control.
  * Excluye: tiradores del asalto, personas en asaltos activos.
  */

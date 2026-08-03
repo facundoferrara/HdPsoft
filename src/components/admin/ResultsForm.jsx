@@ -5,7 +5,7 @@ import { useFighters } from '../../hooks/useFighters'
 import { useConfig } from '../../hooks/useConfig'
 import { completeMatch } from '../../firebase/writes'
 import {
-  calcNormalHit, calcContrapaso, calcDouble, calcSelfDisarm, calcMutualPresa,
+  calcNormalHit, calcContrapaso, calcDouble,
 } from '../../utils/scoring'
 import ZonePicker from './ZonePicker'
 import styles from './ResultsForm.module.css'
@@ -72,7 +72,7 @@ function exchangeReducer(state, action) {
 
 // ── Cálculo de delta ──────────────────────────────────────────────────────────
 
-function computeDelta(exch, scoreRed, scoreBlue, zoneValues, selfDisarmBase) {
+function computeDelta(exch, scoreRed, scoreBlue, zoneValues) {
   let deltaRed = 0, deltaBlue = 0, pointsRescued = 0
 
   if (!exch.valid) return { deltaRed: 0, deltaBlue: 0, pointsRescued: 0 }
@@ -160,7 +160,7 @@ export default function ResultsForm() {
   }
 
   function commitExchange() {
-    const { deltaRed, deltaBlue, pointsRescued } = computeDelta(exch, scoreRed, scoreBlue, zoneValues, selfDisarmBase)
+    const { deltaRed, deltaBlue, pointsRescued } = computeDelta(exch, scoreRed, scoreBlue, zoneValues)
     const newRed = Math.max(0, scoreRed + deltaRed)
     const newBlue = Math.max(0, scoreBlue + deltaBlue)
 
@@ -514,6 +514,3 @@ function PenaltyDetailStep({ fighter, onConfirm }) {
     </div>
   )
 }
-
-// Workaround: zoneTemp managed as useState in parent — see ZonePicker usage above
-// (module-level removed; zoneTemp is proper useState inside ResultsForm component below)
