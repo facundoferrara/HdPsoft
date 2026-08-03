@@ -12,13 +12,13 @@
   color: #888;
 }
 
-.zones, .sides {
+.zones {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
 }
 
-.zone, .side {
+.zone {
   padding: 0.5rem 1rem;
   background: #1a1a1a;
   border: 1px solid #333;
@@ -29,12 +29,12 @@
   transition: background 0.1s, border-color 0.1s, color 0.1s;
 }
 
-.zone:hover, .side:hover {
+.zone:hover {
   background: #252525;
   color: #eee;
 }
 
-.zone.selected, .side.selected {
+.zone.selected {
   background: #1e3a4a;
   border-color: #00bcd4;
   color: #fff;

@@ -43,8 +43,8 @@ const INIT_EXCHANGE = {
   valid: null,
   invalidity_reason: null,
   is_double: null,
-  first_hit: null,     // { fighter, zone, side }
-  contrapaso: null,    // { zone, side }
+  first_hit: null,     // { fighter, zone }
+  contrapaso: null,    // { zone }
   double_red: null,
   double_blue: null,
   penalties: [],
@@ -268,12 +268,12 @@ export default function ResultsForm() {
                 <span className={styles.exchDesc}>{INVALIDITY_REASONS.find(r => r.id === e.invalidity_reason)?.label ?? 'Inválido'}</span>
               ) : e.is_double ? (
                 <span className={styles.exchDesc}>
-                  Doble · {e.double_red?.zone}/{e.double_red?.side} vs {e.double_blue?.zone}/{e.double_blue?.side}
+                  Doble · {e.double_red?.zone} vs {e.double_blue?.zone}
                 </span>
               ) : (
                 <span className={styles.exchDesc}>
-                  {e.first_hit?.fighter === 'red' ? red?.name : blue?.name} → {e.first_hit?.zone}/{e.first_hit?.side}
-                  {e.contrapaso ? ` · contrapaso ${e.contrapaso.zone}/${e.contrapaso.side}` : ''}
+                  {e.first_hit?.fighter === 'red' ? red?.name : blue?.name} → {e.first_hit?.zone}
+                  {e.contrapaso ? ` · contrapaso ${e.contrapaso.zone}` : ''}
                 </span>
               )}
               <span className={styles.exchDelta}>
@@ -353,7 +353,7 @@ export default function ResultsForm() {
           {exch.step === 'firstHit' && (
             <WizardStep label="Primer golpe">
               <ZonePicker label="Zona del golpe" value={zoneTemp} onChange={setZoneTemp} />
-              {zoneTemp?.zone && zoneTemp?.side && (
+              {zoneTemp?.zone && (
                 <BtnRow>
                   <Btn onClick={() => { dispatch({ type: 'SET_FIRST_HIT', value: { ...zoneTemp, fighter: 'red' } }); setZoneTemp(null) }}>
                     {red?.name} (rojo)
@@ -378,7 +378,7 @@ export default function ResultsForm() {
           {exch.step === 'contrapaso' && (
             <WizardStep label="Zona del contrapaso">
               <ZonePicker value={zoneTemp} onChange={setZoneTemp} label="Zona de respuesta" />
-              {zoneTemp?.zone && zoneTemp?.side && (
+              {zoneTemp?.zone && (
                 <Btn onClick={() => { dispatch({ type: 'SET_CONTRAPASO', value: zoneTemp }); setZoneTemp(null) }}>
                   Confirmar contrapaso
                 </Btn>
@@ -389,7 +389,7 @@ export default function ResultsForm() {
           {exch.step === 'doubleRed' && (
             <WizardStep label={`Zona del golpe de ${red?.name} (rojo)`}>
               <ZonePicker value={zoneTemp} onChange={setZoneTemp} />
-              {zoneTemp?.zone && zoneTemp?.side && (
+              {zoneTemp?.zone && (
                 <Btn onClick={() => { dispatch({ type: 'SET_DOUBLE_RED', value: zoneTemp }); setZoneTemp(null) }}>
                   Siguiente →
                 </Btn>
@@ -400,7 +400,7 @@ export default function ResultsForm() {
           {exch.step === 'doubleBlue' && (
             <WizardStep label={`Zona del golpe de ${blue?.name} (azul)`}>
               <ZonePicker value={zoneTemp} onChange={setZoneTemp} />
-              {zoneTemp?.zone && zoneTemp?.side && (
+              {zoneTemp?.zone && (
                 <Btn onClick={() => { dispatch({ type: 'SET_DOUBLE_BLUE', value: zoneTemp }); setZoneTemp(null) }}>
                   Siguiente →
                 </Btn>
