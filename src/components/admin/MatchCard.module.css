@@ -63,6 +63,12 @@
 }
 
 .sameClub { font-size: 0.72rem; color: #f5a623; margin-left: auto; }
+.fairnessWarning { font-size: 0.72rem; color: #ce93d8; }
+.roleMismatch { font-size: 0.72rem; color: #90a4ae; }
+.sameClub ~ .fairnessWarning,
+.sameClub ~ .roleMismatch { margin-left: 0; }
+.fairnessWarning:first-child,
+.roleMismatch:first-child { margin-left: auto; }
 .rerolled { font-size: 0.75rem; color: #666; margin-left: auto; }
 
 .fighters { display: flex; flex-direction: column; gap: 0.2rem; }
@@ -92,6 +98,63 @@
 }
 
 .controlLabel { color: #555; }
+.controlSep { color: #444; }
+.controlName { color: #888; }
+
+.controlSlot { position: relative; display: inline-block; }
+
+.controlNameBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #9ccdf5;
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.controlNameBtn:hover { color: #cfe8ff; }
+
+.controlBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.controlDropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 11;
+  margin-top: 0.25rem;
+  min-width: 160px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem;
+}
+
+.controlOption {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0.35rem 0.5rem;
+  color: #e0e0e0;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.controlOption:hover { background: #2a2a2a; }
+.controlOptionClub { color: #666; font-size: 0.7rem; }
+
+.controlEmpty { padding: 0.35rem 0.5rem; color: #555; font-size: 0.78rem; font-style: italic; }
 
 .result {
   display: flex;

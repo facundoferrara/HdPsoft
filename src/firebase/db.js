@@ -20,6 +20,7 @@ export const roundsRef = collection(db, 'rounds')
 export const matchesRef = collection(db, 'matches')
 export const leaderboardRef = collection(db, 'leaderboard')
 export const byesRef = collection(db, 'byes')
+export const controlStatsRef = collection(db, 'control_stats')
 
 /** Subcolección de intercambios de un asalto */
 export const exchangesRef = (matchId) =>

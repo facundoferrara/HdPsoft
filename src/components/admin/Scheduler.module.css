@@ -44,14 +44,41 @@
 }
 .cancelBtn:hover { background: #3a2525; }
 
+.boardLayout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
 .arenas {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
 }
 
+.matchColumnTitle {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.6rem;
+}
+
 .matchGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 0.75rem;
+}
+
+@media (min-width: 1024px) {
+  .boardLayout {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    align-items: start;
+    gap: 1.5rem;
+  }
+  .arenas {
+    grid-template-columns: 1fr;
+  }
 }

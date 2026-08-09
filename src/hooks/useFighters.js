@@ -19,6 +19,8 @@ export function useFighters() {
   }, [])
 
   const activeFighters = fighters.filter((f) => !['tbd', 'na'].includes(f.tier))
+  // Elegibles para cuerpo de control: cualquiera presente (incl. staff 'na'), salvo 'tbd' (aún no acreditado)
+  const controlBodyEligible = fighters.filter((f) => f.tier !== 'tbd')
 
-  return { fighters, activeFighters, fightersMap, loading }
+  return { fighters, activeFighters, controlBodyEligible, fightersMap, loading }
 }

@@ -63,3 +63,14 @@
   font-style: italic;
   margin-top: auto;
 }
+
+.control {
+  font-size: 0.72rem;
+  color: #7a8a90;
+  border-top: 1px solid #163040;
+  padding-top: 0.3rem;
+  margin-top: 0.15rem;
+}
+
+.clickable { cursor: pointer; }
+.clickable:hover { border-color: #4dd0e1; }

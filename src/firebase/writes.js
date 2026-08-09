@@ -11,7 +11,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
-import { matchesRef, roundsRef, byesRef, exchangesRef } from './db'
+import { matchesRef, roundsRef, byesRef, exchangesRef, fightersRef } from './db'
 
 const TIER_ORDER = { boffer: 0, nylon: 1, acero: 2 }
 
@@ -27,14 +27,41 @@ export async function cancelMatch(matchId) {
 
 // ── Reroll de cuerpo de control ───────────────────────────────────────────────
 
-export async function updateMatchControlBody(matchId, { refereeId, judge1Id, judge2Id, sameClubWarning }) {
-  await updateDoc(doc(db, 'matches', matchId), {
-    referee_id: refereeId,
-    judge_1_id: judge1Id,
-    judge_2_id: judge2Id,
-    same_club_warning: sameClubWarning,
+/**
+ * Actualiza el cuerpo de control de un asalto y ajusta los contadores acumulados
+ * de `control_stats` (si se pasa `prevControlBody`, resta a quien sale y suma a quien entra).
+ *
+ * @param {string} matchId
+ * @param {{ refereeId, judge1Id, judge2Id, sameClubWarning, roleMismatchWarning, fairnessWarning }} next
+ * @param {{ refereeId, judge1Id, judge2Id }|null} prevControlBody — ids previos, para ajustar stats
+ */
+export async function updateMatchControlBody(matchId, next, prevControlBody = null) {
+  const batch = writeBatch(db)
+
+  batch.update(doc(db, 'matches', matchId), {
+    referee_id: next.refereeId,
+    judge_1_id: next.judge1Id,
+    judge_2_id: next.judge2Id,
+    same_club_warning: next.sameClubWarning ?? false,
+    fairness_warning: next.fairnessWarning ?? false,
+    role_mismatch_warning: next.roleMismatchWarning ?? false,
     rerolled: true,
   })
+
+  if (prevControlBody) {
+    const roleChanges = [
+      { prev: prevControlBody.refereeId, curr: next.refereeId, field: 'referee_count' },
+      { prev: prevControlBody.judge1Id,  curr: next.judge1Id,  field: 'judge_count' },
+      { prev: prevControlBody.judge2Id,  curr: next.judge2Id,  field: 'judge_count' },
+    ]
+    for (const { prev, curr, field } of roleChanges) {
+      if (prev === curr) continue
+      if (prev) batch.set(doc(db, 'control_stats', prev), { [field]: increment(-1) }, { merge: true })
+      if (curr) batch.set(doc(db, 'control_stats', curr), { [field]: increment(1) }, { merge: true })
+    }
+  }
+
+  await batch.commit()
 }
 
 // ── Cierre de asalto ──────────────────────────────────────────────────────────
@@ -86,6 +113,48 @@ export async function completeMatch(matchId, {
   }
 }
 
+/**
+ * Cierra un asalto por override de mesa: puntaje final tipeado a mano + nota editorial.
+ * No escribe exchanges — no hay datos reales de intercambio que registrar en una corrección.
+ *
+ * @param {string} matchId
+ * @param {{ finalScoreRed, finalScoreBlue, winnerId, overrideNote, fighterRedId, fighterBlueId }} data
+ */
+export async function overrideMatch(matchId, {
+  finalScoreRed,
+  finalScoreBlue,
+  winnerId,
+  overrideNote,
+  fighterRedId,
+  fighterBlueId,
+}) {
+  const batch = writeBatch(db)
+
+  batch.update(doc(db, 'matches', matchId), {
+    status: 'complete',
+    final_score_red: finalScoreRed,
+    final_score_blue: finalScoreBlue,
+    winner_id: winnerId,
+    ended_early: false,
+    ended_by_depletion: false,
+    override: true,
+    override_note: overrideNote,
+    overridden_at: serverTimestamp(),
+  })
+
+  batch.update(doc(db, 'leaderboard', fighterRedId), {
+    total_points: increment(Math.round(finalScoreRed * 100) / 100),
+    matches_complete: increment(1),
+  })
+
+  batch.update(doc(db, 'leaderboard', fighterBlueId), {
+    total_points: increment(Math.round(finalScoreBlue * 100) / 100),
+    matches_complete: increment(1),
+  })
+
+  await batch.commit()
+}
+
 // ── Generación de ronda ───────────────────────────────────────────────────────
 
 /**
@@ -107,7 +176,7 @@ export async function generateRound(roundNumber, pairs) {
   const sequenceBase = allMatchesSnap.size
 
   const batch = writeBatch(db)
-  pairs.forEach(({ red, blue, refereeId, judge1Id, judge2Id, sameClubWarning }, idx) => {
+  pairs.forEach(({ red, blue, refereeId, judge1Id, judge2Id, sameClubWarning, roleMismatchWarning, fairnessWarning }, idx) => {
     const matchRef = doc(collection(db, 'matches'))
     const match_tier =
       TIER_ORDER[red.tier] <= TIER_ORDER[blue.tier] ? red.tier : blue.tier
@@ -131,8 +200,14 @@ export async function generateRound(roundNumber, pairs) {
       ended_early: false,
       ended_by_depletion: false,
       same_club_warning: sameClubWarning ?? false,
+      fairness_warning: fairnessWarning ?? false,
+      role_mismatch_warning: roleMismatchWarning ?? false,
       rerolled: false,
     })
+
+    if (refereeId) batch.set(doc(db, 'control_stats', refereeId), { referee_count: increment(1) }, { merge: true })
+    if (judge1Id)  batch.set(doc(db, 'control_stats', judge1Id),  { judge_count: increment(1) },  { merge: true })
+    if (judge2Id)  batch.set(doc(db, 'control_stats', judge2Id),  { judge_count: increment(1) },  { merge: true })
   })
   await batch.commit()
 
@@ -176,6 +251,11 @@ export async function cancelRound(roundId, matchIds) {
 
 export async function updateFighterGear(fighterId, tier) {
   await updateDoc(doc(db, 'fighters', fighterId), { tier })
+}
+
+/** Alta de una persona presente que no compite (staff/colaborador), elegible como cuerpo de control. */
+export async function addStaffMember({ name, club, role }) {
+  await addDoc(fightersRef, { name, club: club || 'Ind', tier: 'na', role: role || 'both' })
 }
 
 // ── Estado del evento ─────────────────────────────────────────────────────────

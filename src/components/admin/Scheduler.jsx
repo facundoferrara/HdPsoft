@@ -5,6 +5,7 @@ import { useRounds } from '../../hooks/useRounds'
 import { useRoundMatches } from '../../hooks/useMatches'
 import { useFighters } from '../../hooks/useFighters'
 import { useLeaderboard } from '../../hooks/useLeaderboard'
+import { useControlStats } from '../../hooks/useControlStats'
 import { generatePairings, pairKey } from '../../utils/pairing'
 import { assignControlBody, getCandidatesForReroll } from '../../utils/controlBody'
 import { generateRound, activateMatch, updateMatchControlBody, registerBye, cancelRound } from '../../firebase/writes'
@@ -16,11 +17,23 @@ import styles from './Scheduler.module.css'
 
 const ARENAS = [1, 2, 3, 4]
 
-export default function Scheduler({ onRoundComplete }) {
+export default function Scheduler({ onRoundComplete, onSelectActiveMatch }) {
   const { currentRound, nextRoundNumber } = useRounds()
   const { matches, loading: matchesLoading } = useRoundMatches(currentRound?.id)
-  const { fighters, activeFighters, fightersMap } = useFighters()
+  const { fighters, activeFighters, controlBodyEligible, fightersMap } = useFighters()
   const { leaderboard } = useLeaderboard()
+  const { statsMap } = useControlStats()
+
+  function seedRoleStats() {
+    const roleStats = {}
+    for (const f of controlBodyEligible) {
+      roleStats[f.id] = {
+        refCount: statsMap[f.id]?.referee_count ?? 0,
+        judgeCount: statsMap[f.id]?.judge_count ?? 0,
+      }
+    }
+    return roleStats
+  }
   const [generating, setGenerating] = useState(false)
   const [activeCard, setActiveCard] = useState(null)
 
@@ -86,13 +99,13 @@ export default function Scheduler({ onRoundComplete }) {
 
       const { pairs, byeFighterId } = generatePairings(enrichedFighters, pastPairs)
 
-      // Asignar cuerpo de control
-      const roleStats = {}
+      // Asignar cuerpo de control — arranca de los contadores acumulados de todo el evento
+      const roleStats = seedRoleStats()
       const enrichedPairs = pairs.map(({ red, blue }) => {
         const fighterIds = [red.id, blue.id]
         const fighterClubs = [red.club, blue.club]
-        const candidatePool = activeFighters.filter((f) => !fighterIds.includes(f.id))
-        const cb = assignControlBody(candidatePool, fighterClubs, roleStats)
+        const candidatePool = controlBodyEligible.filter((f) => !fighterIds.includes(f.id))
+        const cb = assignControlBody(candidatePool, fighterClubs, roleStats, controlBodyEligible)
         // Actualizar roleStats para distribuir equitativamente
         if (cb) {
           roleStats[cb.refereeId] = {
@@ -144,12 +157,38 @@ export default function Scheduler({ onRoundComplete }) {
       fightersMap[match.fighter_blue_id]?.club,
     ]
     const candidates = getCandidatesForReroll(fighters, [...busyIds], matchFighterIds)
-    const cb = assignControlBody(candidates, matchFighterClubs)
+    const cb = assignControlBody(candidates, matchFighterClubs, seedRoleStats(), controlBodyEligible)
     if (!cb) {
       alert('No hay suficientes árbitros disponibles para hacer reroll.')
       return
     }
-    await updateMatchControlBody(match.id, cb)
+    await updateMatchControlBody(match.id, cb, {
+      refereeId: match.referee_id, judge1Id: match.judge_1_id, judge2Id: match.judge_2_id,
+    })
+  }
+
+  // ── Reasignación manual de árbitro/juez ───────────────────────────────────────
+
+  function getEligibleForMatch(match) {
+    return getCandidatesForReroll(fighters, [...busyIds], [match.fighter_red_id, match.fighter_blue_id])
+  }
+
+  async function handleAssignRole(match, role, fighterId) {
+    const roleField = { referee: 'refereeId', judge1: 'judge1Id', judge2: 'judge2Id' }[role]
+    const next = {
+      refereeId: match.referee_id,
+      judge1Id: match.judge_1_id,
+      judge2Id: match.judge_2_id,
+      fairnessWarning: match.fairness_warning ?? false,
+      roleMismatchWarning: match.role_mismatch_warning ?? false,
+    }
+    next[roleField] = fighterId
+    const redClub = fightersMap[match.fighter_red_id]?.club
+    const blueClub = fightersMap[match.fighter_blue_id]?.club
+    next.sameClubWarning = [redClub, blueClub].includes(fightersMap[fighterId]?.club)
+    await updateMatchControlBody(match.id, next, {
+      refereeId: match.referee_id, judge1Id: match.judge_1_id, judge2Id: match.judge_2_id,
+    })
   }
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -187,32 +226,40 @@ export default function Scheduler({ onRoundComplete }) {
       </div>
 
       <DndContext sensors={sensors} onDragStart={({ active }) => setActiveCard(active.id)} onDragEnd={handleDragEnd}>
-        {/* Arenas */}
-        <div className={styles.arenas}>
-          {ARENAS.map((arena) => (
-            <ArenaDropZone
-              key={arena}
-              arena={arena}
-              activeMatch={activeMatchByArena(arena)}
-              fightersMap={fightersMap}
-            />
-          ))}
-        </div>
-
-        {/* Grid de asaltos */}
-        {matches.length > 0 && (
-          <div className={styles.matchGrid}>
-            {matches.map((match) => (
-              <MatchCard
-                key={match.id}
-                match={match}
+        <div className={styles.boardLayout}>
+          {/* Arenas */}
+          <div className={styles.arenas}>
+            {ARENAS.map((arena) => (
+              <ArenaDropZone
+                key={arena}
+                arena={arena}
+                activeMatch={activeMatchByArena(arena)}
                 fightersMap={fightersMap}
-                isBlocked={isBlocked(match)}
-                onReroll={handleReroll}
+                onSelect={onSelectActiveMatch}
               />
             ))}
           </div>
-        )}
+
+          {/* Grid de asaltos */}
+          {matches.length > 0 && (
+            <div className={styles.matchColumn}>
+              <h3 className={styles.matchColumnTitle}>Asaltos de la ronda</h3>
+              <div className={styles.matchGrid}>
+                {matches.map((match) => (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    fightersMap={fightersMap}
+                    isBlocked={isBlocked(match)}
+                    onReroll={handleReroll}
+                    candidates={getEligibleForMatch(match)}
+                    onAssignRole={handleAssignRole}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         <DragOverlay>
           {activeCard ? (

@@ -1,210 +1,227 @@
-.page { display: flex; flex-direction: column; gap: 1.25rem; }
+﻿/* ── Base ─────────────────────────────────────────────────────────────────── */
+.page  { display: flex; flex-direction: column; gap: 1rem; }
 .empty { color: #666; font-style: italic; padding: 2rem; }
 
 .sectionTitle {
-  font-size: 0.9rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #888;
-  margin: 0;
+  font-size: 0.9rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: #888; margin: 0;
 }
 
+/* ── Match selector ──────────────────────────────────────────────────────── */
 .matchList { display: flex; flex-direction: column; gap: 0.5rem; }
 
 .matchOption {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.85rem 1.25rem;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 8px;
-  color: #f0f0f0;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: background 0.1s, border-color 0.1s;
-  text-align: left;
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.85rem 1.25rem; background: #1a1a1a; border: 1px solid #333;
+  border-radius: 8px; color: #f0f0f0; font-size: 0.95rem; cursor: pointer;
+  transition: background 0.1s, border-color 0.1s; text-align: left;
 }
 .matchOption:hover { background: #222; border-color: #555; }
 
 .arena { font-size: 0.75rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; min-width: 60px; }
+.vs    { color: #555; }
 
-/* Scoreboard */
-.scoreboard {
-  display: flex;
-  align-items: center;
-  background: #141414;
-  border-radius: 10px;
-  padding: 1rem 1.5rem;
-  border: 1px solid #222;
+/* ── Fighter name colours ────────────────────────────────────────────────── */
+.redName  { color: #ef5350; font-weight: 700; }
+.blueName { color: #42a5f5; font-weight: 700; }
+
+/* ── Sheet header ────────────────────────────────────────────────────────── */
+.sheetHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; padding: 0.75rem 1rem;
+  background: #141414; border: 1px solid #222; border-radius: 8px;
+}
+.sheetSide { display: flex; align-items: center; gap: 0.5rem; }
+.sheetSideRight { flex-direction: row-reverse; }
+
+.overrideToggleBtn {
+  padding: 0.3rem 0.7rem; background: #1a1a1a; border: 1px solid #444;
+  border-radius: 14px; color: #999; font-size: 0.72rem; font-weight: 600; cursor: pointer;
+}
+.overrideToggleBtn:hover { border-color: #f5a623; color: #f5a623; }
+.overrideToggleBtnActive { background: #3a2a0a; border-color: #f5a623; color: #f5a623; }
+
+.overrideForm {
+  display: flex; flex-direction: column; gap: 0.75rem;
+  padding: 1rem; background: #1a1408; border: 1px solid #4a3a1a; border-radius: 8px;
+}
+.overrideHint { margin: 0; font-size: 0.82rem; color: #b0935a; }
+
+.overrideScores { display: flex; align-items: flex-end; gap: 0.75rem; }
+.overrideScoreField { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; }
+.overrideScoreInput {
+  width: 90px; padding: 0.4rem 0.5rem; background: #111; border: 1px solid #333;
+  border-radius: 5px; color: #eee; font-size: 1.1rem; font-weight: 700;
 }
 
-.score {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+.overrideNoteInput {
+  padding: 0.5rem 0.6rem; background: #111; border: 1px solid #333; border-radius: 5px;
+  color: #eee; font-size: 0.85rem; resize: vertical; font-family: inherit;
+}
+.overrideNoteInput::placeholder { color: #555; }
+
+.cardBadges { display: flex; gap: 0.3rem; }
+.badgeAdv    { padding: 0.15rem 0.45rem; background: #2a2a2a; border: 1px solid #555; border-radius: 3px; font-size: 0.72rem; color: #aaa; }
+.badgeYellow { padding: 0.15rem 0.45rem; background: #3a2e00; border: 1px solid #f5c518; border-radius: 3px; font-size: 0.72rem; color: #f5c518; font-weight: 700; }
+
+/* ── Exchange block ──────────────────────────────────────────────────────── */
+.exchBlock {
+  display: flex; flex-direction: column;
+  border: 1px solid #222; border-radius: 8px; overflow: hidden;
 }
 
-.redScore { align-items: flex-start; }
-.blueScore { align-items: flex-end; }
-
-.fighterLabel { font-size: 0.82rem; color: #888; font-weight: 600; }
-
-.pts {
-  font-size: 3rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
+/* Invalids sub-section */
+.invalidsSection {
+  background: #0d0d0d; padding: 0.6rem 0.9rem;
+  border-bottom: 1px solid #1e1e1e;
+  display: flex; flex-direction: column; gap: 0.4rem;
 }
+.invalidsHeader { display: flex; align-items: center; justify-content: space-between; }
+.invalidsLabel  { font-size: 0.72rem; color: #555; text-transform: uppercase; letter-spacing: 0.06em; }
 
-.redScore .pts { color: #ef5350; }
-.blueScore .pts { color: #42a5f5; }
-
-.scoreCenter {
-  flex: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 0 1.5rem;
+.addInvalidBtn {
+  padding: 0.2rem 0.6rem; background: transparent; border: 1px dashed #333;
+  border-radius: 4px; color: #555; font-size: 0.78rem; cursor: pointer;
 }
+.addInvalidBtn:hover { border-color: #555; color: #aaa; }
 
-.exchCount { font-size: 0.75rem; color: #666; white-space: nowrap; }
-
-/* Preview */
-.previewHeader {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.scoreBig {
-  font-size: 2.5rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.dash { color: #555; }
-.redName { color: #ef5350; }
-.blueName { color: #42a5f5; }
-
-.exchangeList { display: flex; flex-direction: column; gap: 0.4rem; }
-
-.exchRow {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.4rem 0.75rem;
-  background: #141414;
-  border-radius: 4px;
-  font-size: 0.85rem;
-}
-
-.exchInvalid { opacity: 0.6; }
-.exchNum { color: #555; font-size: 0.75rem; min-width: 24px; }
-.exchDesc { flex: 1; color: #ccc; }
-
-.exchDelta { display: flex; gap: 0.5rem; }
-.red { color: #ef5350; }
-.blue { color: #42a5f5; }
-
-.previewActions { display: flex; gap: 1rem; padding-top: 0.5rem; }
-
-.backBtn {
-  padding: 0.6rem 1.25rem;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 6px;
-  color: #aaa;
-  cursor: pointer;
-}
-
-.confirmBtn {
-  padding: 0.65rem 1.75rem;
-  background: #1e3a1e;
-  border: 1px solid #81c784;
-  border-radius: 6px;
-  color: #81c784;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.confirmBtn:hover { background: #264526; }
-.confirmBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-/* Wizard */
-.matchOverBanner {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  background: #1a2a1a;
-  border: 1px solid #81c784;
-  border-radius: 8px;
-  color: #81c784;
-  font-weight: 600;
-}
-
-.previewBtn {
-  margin-left: auto;
-  padding: 0.45rem 1rem;
-  background: #81c784;
-  color: #0a0a0a;
-  border: none;
+.invalidRow {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  padding: 0.35rem 0.5rem; background: #111; border: 1px solid #1e1e1e;
   border-radius: 5px;
-  font-weight: 700;
-  cursor: pointer;
 }
 
-.wizard { display: flex; flex-direction: column; gap: 1rem; }
-.wizardTitle { font-size: 0.85rem; color: #666; text-transform: uppercase; letter-spacing: 0.06em; }
-
-.step { display: flex; flex-direction: column; gap: 0.75rem; }
-.stepLabel { font-size: 0.9rem; color: #aaa; font-weight: 600; }
-
-.btnRow { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-
-.wBtn {
-  padding: 0.55rem 1.1rem;
-  background: #1e3a4a;
-  border: 1px solid #00bcd4;
-  border-radius: 6px;
-  color: #00bcd4;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.1s;
+.notesInput {
+  flex: 1; min-width: 120px; padding: 0.25rem 0.5rem;
+  background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px;
+  color: #ccc; font-size: 0.82rem;
 }
-.wBtn:hover { background: #254d63; }
-.wBtnSecondary { background: #1a1a1a; border-color: #444; color: #aaa; }
-.wBtnSecondary:hover { background: #222; color: #ddd; }
-.wBtnSelected { background: #1e3a4a; border-color: #00bcd4; color: #fff; }
+.notesInput::placeholder { color: #444; }
 
-.penTag {
-  padding: 0.25rem 0.6rem;
-  background: #2a1a0a;
-  border: 1px solid #4a3a1a;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  color: #f5a623;
+.removeInvalidBtn {
+  padding: 0.1rem 0.4rem; background: transparent; border: none;
+  color: #444; cursor: pointer; font-size: 0.8rem;
 }
+.removeInvalidBtn:hover { color: #f44; }
+
+/* Valid exchange grid */
+.exchGrid {
+  background: #111; padding: 0.85rem 1rem;
+  display: flex; flex-direction: column; gap: 0.65rem;
+}
+
+.exchGridHeader {
+  display: flex; align-items: baseline; justify-content: space-between;
+}
+.exchGridTitle { font-size: 0.78rem; color: #555; text-transform: uppercase; letter-spacing: 0.07em; }
+.scoreIn { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.scoreDash { color: #444; }
+
+/* ── Tap grid — planilla eidética ────────────────────────────────────────── */
+.tapGrid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.zoneButtons {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+}
+
+.zoneBtn {
+  min-width: 44px; padding: 0.5rem 0; text-align: center;
+  background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 6px;
+  color: #999; font-size: 1.05rem; font-weight: 700;
+  cursor: pointer; transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.zoneBtn:hover:not(:disabled) { background: #222; border-color: #555; color: #ddd; }
+.zoneBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.zoneBtnRed:hover:not(:disabled)  { border-color: #ef535066; }
+.zoneBtnBlue:hover:not(:disabled) { border-color: #42a5f566; }
+
+.zoneBtnActive.zoneBtnRed  { background: #3a1e1e; border-color: #ef5350; color: #ef5350; }
+.zoneBtnActive.zoneBtnBlue { background: #1a2a3a; border-color: #42a5f5; color: #42a5f5; }
+.zoneBtnContra              { background: #2a2210; border-color: #f5c518; color: #f5c518; }
+
+.presaBtn {
+  padding: 0.3rem 0.6rem; align-self: center;
+  background: #161616; border: 1px dashed #333; border-radius: 12px;
+  color: #777; font-size: 0.72rem; font-weight: 600; cursor: pointer;
+}
+.presaBtn:hover:not(:disabled) { border-color: #555; color: #ccc; }
+.presaBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+.presaBtn.zoneBtnActive { background: #2a1e3a; border-color: #ab47bc; color: #ab47bc; border-style: solid; }
+.presaBtn.zoneBtnContra { background: #2a2210; border-color: #f5c518; color: #f5c518; border-style: solid; }
+
+.modeColumn {
+  display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+  padding-top: 0.1rem;
+}
+
+.modePill {
+  padding: 0.3rem 0.7rem; background: #161616; border: 1px solid #2a2a2a;
+  border-radius: 14px; color: #666; font-size: 0.75rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.modePill:hover { border-color: #555; color: #bbb; }
+.modePillActive { background: #1e3a4a; border-color: #00bcd4; color: #fff; }
+
+.contraTag { font-size: 0.68rem; color: #f5c518; text-align: center; }
+
+/* ── Penalty toggles ─────────────────────────────────────────────────────── */
+.exchPenRow { display: flex; gap: 1.25rem; flex-wrap: wrap; padding-top: 0.25rem; }
+
+.penToggle { display: flex; align-items: center; gap: 0.4rem; }
+.penLabel  { font-size: 0.8rem; font-weight: 700; min-width: 70px; }
+
+.penOpts { display: flex; gap: 0.25rem; }
+.penOpt {
+  padding: 0.25rem 0.55rem; background: #1a1a1a; border: 1px solid #2a2a2a;
+  border-radius: 4px; color: #555; font-size: 0.78rem; font-weight: 700;
+  cursor: pointer; transition: background 0.1s, color 0.1s;
+}
+.penOpt:hover { background: #222; color: #aaa; }
+.penOptWarn   { background: #2a2a1a; border-color: #888830; color: #cccc55; }
+.penOptYellow { background: #3a2e00; border-color: #f5c518; color: #f5c518; }
+
+/* ── Difference row ──────────────────────────────────────────────────────── */
+.diffRow {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.35rem 0.5rem; background: #0d0d0d; border-radius: 5px;
+  font-size: 0.9rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.diffLabel { font-size: 0.75rem; color: #555; margin-right: 0.25rem; }
+
+.redPos   { color: #ef5350; }
+.redNeg   { color: #ef535088; }
+.bluePos  { color: #42a5f5; }
+.blueNeg  { color: #42a5f588; }
+.neutral  { color: #555; }
+
+.invalidTag { font-size: 0.8rem; color: #f5c518; font-style: italic; }
+
+/* ── Final row ───────────────────────────────────────────────────────────── */
+.finalRow {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.6rem 0.5rem; margin-top: 0.25rem;
+  border-top: 1px solid #222; font-size: 1.1rem;
+}
+.finalLabel { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #666; }
+
+/* ── Confirm / back buttons ──────────────────────────────────────────────── */
+.confirmBtn {
+  padding: 0.75rem 1.5rem; background: #1a3a1a; border: 1px solid #66bb6a;
+  border-radius: 8px; color: #66bb6a; font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s;
+}
+.confirmBtn:hover:not(:disabled) { background: #1e4a1e; }
+.confirmBtn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .backMatchBtn {
-  margin-top: auto;
-  align-self: flex-start;
-  padding: 0.35rem 0.75rem;
-  background: transparent;
-  border: 1px solid #2a2a2a;
-  border-radius: 4px;
-  color: #666;
-  font-size: 0.8rem;
-  cursor: pointer;
+  align-self: flex-start; padding: 0.35rem 0.75rem;
+  background: transparent; border: 1px solid #2a2a2a;
+  border-radius: 4px; color: #555; font-size: 0.8rem; cursor: pointer;
 }
 .backMatchBtn:hover { color: #aaa; border-color: #444; }
-
-.vs { color: #555; }

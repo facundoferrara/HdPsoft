@@ -1,516 +1,576 @@
-import { useReducer, useState, useEffect, useCallback } from 'react'
+﻿import { useState } from 'react'
 import { useRoundMatches } from '../../hooks/useMatches'
 import { useRounds } from '../../hooks/useRounds'
 import { useFighters } from '../../hooks/useFighters'
 import { useConfig } from '../../hooks/useConfig'
-import { completeMatch } from '../../firebase/writes'
-import {
-  calcNormalHit, calcContrapaso, calcDouble,
-} from '../../utils/scoring'
-import ZonePicker from './ZonePicker'
+import { completeMatch, overrideMatch } from '../../firebase/writes'
+import { calcNormalHit, calcContrapaso, calcDouble, calcMutualPresa } from '../../utils/scoring'
+import { PRIMARY_ZONES } from '../../utils/zones'
 import styles from './ResultsForm.module.css'
 
-// ── Catálogos ─────────────────────────────────────────────────────────────────
+// State factories
 
-const INVALIDITY_REASONS = [
-  { id: 'inconclusive', label: 'Inconcluso (caída)' },
-  { id: 'foul', label: 'Falta (uno)' },
-  { id: 'double_foul', label: 'Doble falta' },
-]
+function emptyInvalid() { return { notes: '', penRed: null, penBlue: null } }
 
-const PENALTY_TYPES = [
-  { id: 'warning', label: 'Advertencia' },
-  { id: 'yellow', label: 'Amarilla' },
-  { id: 'red', label: 'Roja' },
-]
-
-const PENALTY_REASONS = [
-  { id: 'illegal_zone', label: 'Golpe zona ilegal' },
-  { id: 'illegal_technique', label: 'Técnica ilegal' },
-  { id: 'knockdown', label: 'Derribo' },
-  { id: 'excessive_force', label: 'Fuerza excesiva' },
-  { id: 'contempt', label: 'Desacato' },
-  { id: 'expose_back', label: 'Exponer espalda' },
-  { id: 'out_of_arena', label: 'Fuera de arena' },
-  { id: 'self_fall', label: 'Caída propia' },
-  { id: 'self_disarm', label: 'Desarme autoinfligido' },
-]
-
-// ── Estado inicial del wizard ─────────────────────────────────────────────────
-
-const INIT_EXCHANGE = {
-  step: 'valid',       // valid | invalidReason | type | firstHit | contrapasoQ | contrapaso | doubleRed | doubleBlue | penalties | penaltyDetail | done
-  valid: null,
-  invalidity_reason: null,
-  is_double: null,
-  first_hit: null,     // { fighter, zone }
-  contrapaso: null,    // { zone }
-  double_red: null,
-  double_blue: null,
-  penalties: [],
-  // temp for penalty entry
-  pendingPenalty: null,
-}
-
-function exchangeReducer(state, action) {
-  switch (action.type) {
-    case 'SET_VALID': return { ...state, valid: action.value, step: action.value ? 'type' : 'invalidReason' }
-    case 'SET_INVALIDITY': return { ...state, invalidity_reason: action.value, step: 'done' }
-    case 'SET_TYPE': return { ...state, is_double: action.value, step: action.value ? 'doubleRed' : 'firstHit' }
-    case 'SET_FIRST_HIT': return { ...state, first_hit: action.value, step: 'contrapasoQ' }
-    case 'SET_CONTRAPASO_Q': return { ...state, step: action.value ? 'contrapaso' : 'penalties' }
-    case 'SET_CONTRAPASO': return { ...state, contrapaso: action.value, step: 'penalties' }
-    case 'SET_DOUBLE_RED': return { ...state, double_red: action.value, step: 'doubleBlue' }
-    case 'SET_DOUBLE_BLUE': return { ...state, double_blue: action.value, step: 'penalties' }
-    case 'ADD_PENALTY': return { ...state, penalties: [...state.penalties, action.value], step: 'penalties' }
-    case 'START_PENALTY': return { ...state, pendingPenalty: action.value, step: 'penaltyDetail' }
-    case 'FINISH_PENALTIES': return { ...state, step: 'done' }
-    case 'RESET': return { ...INIT_EXCHANGE }
-    default: return state
+function emptyBlock() {
+  return {
+    invalids:       [],
+    isDouble:       null,
+    hitFirst:       null,   // 'red'|'blue'
+    hitZone:        null,
+    alsoHit:        null,   // ¿también golpeó el otro? → contrapaso si !isDouble
+    contrapasoZone: null,
+    doubleRedZone:  null,
+    doubleBlueZone: null,
+    penRed:         null,   // 'warning'|'yellow'|null
+    penBlue:        null,
   }
 }
 
-// ── Cálculo de delta ──────────────────────────────────────────────────────────
+function emptyBlocks() { return [emptyBlock(), emptyBlock(), emptyBlock()] }
 
-function computeDelta(exch, scoreRed, scoreBlue, zoneValues) {
+// Block completion
+
+function isBlockComplete(b) {
+  if (b.isDouble === null) return false
+  if (b.isDouble === 'presa') return true   // presa mutua: no zones needed
+  if (b.isDouble === true) return b.doubleRedZone !== null && b.doubleBlueZone !== null
+  if (!b.hitFirst || !b.hitZone) return false
+  if (b.alsoHit === null) return false
+  return !(b.alsoHit && !b.contrapasoZone)
+}
+
+// Score computation (derived, not state)
+
+function computeBlockDelta(block, scoreRed, scoreBlue, zoneValues) {
+  if (!isBlockComplete(block)) return { deltaRed: 0, deltaBlue: 0, pointsRescued: 0 }
+
   let deltaRed = 0, deltaBlue = 0, pointsRescued = 0
 
-  if (!exch.valid) return { deltaRed: 0, deltaBlue: 0, pointsRescued: 0 }
-
-  if (exch.is_double && exch.double_red && exch.double_blue) {
-    const r = calcDouble(exch.double_red.zone, exch.double_blue.zone, scoreRed, scoreBlue, zoneValues)
-    deltaRed = -r.deltaRed
-    deltaBlue = -r.deltaBlue
-  } else if (exch.first_hit) {
-    const { fighter, zone } = exch.first_hit
-    if (fighter === 'red') {
-      // Rojo golpea azul
-      if (exch.contrapaso) {
-        const r = calcContrapaso(zone, exch.contrapaso.zone, scoreBlue, zoneValues)
-        deltaBlue = -r.pointsDelta
-        pointsRescued = r.pointsRescued
-      } else {
-        const r = calcNormalHit(zone, scoreBlue, zoneValues)
-        deltaBlue = -r.pointsDelta
-      }
-    } else {
-      // Azul golpea rojo
-      if (exch.contrapaso) {
-        const r = calcContrapaso(zone, exch.contrapaso.zone, scoreRed, zoneValues)
-        deltaRed = -r.pointsDelta
-        pointsRescued = r.pointsRescued
-      } else {
-        const r = calcNormalHit(zone, scoreRed, zoneValues)
-        deltaRed = -r.pointsDelta
-      }
-    }
+  if (block.isDouble === 'presa') {
+    const r = calcMutualPresa(scoreRed, scoreBlue)
+    deltaRed = -r.deltaRed; deltaBlue = -r.deltaBlue
+  } else if (block.isDouble === true) {
+    const r = calcDouble(block.doubleRedZone, block.doubleBlueZone, scoreRed, scoreBlue, zoneValues)
+    deltaRed = -r.deltaRed; deltaBlue = -r.deltaBlue
+  } else if (block.hitFirst === 'red') {
+    const r = block.alsoHit && block.contrapasoZone
+      ? calcContrapaso(block.hitZone, block.contrapasoZone, scoreBlue, zoneValues)
+      : calcNormalHit(block.hitZone, scoreBlue, zoneValues)
+    deltaBlue = -r.pointsDelta; deltaRed = +r.pointsDelta; pointsRescued = r.pointsRescued ?? 0
+  } else {
+    const r = block.alsoHit && block.contrapasoZone
+      ? calcContrapaso(block.hitZone, block.contrapasoZone, scoreRed, zoneValues)
+      : calcNormalHit(block.hitZone, scoreRed, zoneValues)
+    deltaRed = -r.pointsDelta; deltaBlue = +r.pointsDelta; pointsRescued = r.pointsRescued ?? 0
   }
 
-  // Penalizaciones: amarilla y roja anulan la acción ofensiva del infractor
-  for (const pen of exch.penalties) {
-    if (pen.type === 'yellow' || pen.type === 'red') {
-      if (pen.fighter === 'red') {
-        // Anular acción ofensiva de rojo (el delta de azul se revierte)
-        if (exch.first_hit?.fighter === 'red') deltaBlue = 0
-      } else {
-        if (exch.first_hit?.fighter === 'blue') deltaRed = 0
-      }
-    }
+  // Amarilla al atacante anula el intercambio completo
+  const attacker = (block.isDouble === false) ? block.hitFirst : null
+  if ((block.penRed === 'yellow' && attacker === 'red') ||
+      (block.penBlue === 'yellow' && attacker === 'blue') ||
+      (block.penRed === 'yellow' && block.penBlue === 'yellow')) {
+    deltaRed = 0; deltaBlue = 0
   }
 
   return { deltaRed, deltaBlue, pointsRescued }
 }
 
-// ── Componente ────────────────────────────────────────────────────────────────
+function computeScores(blocks, startPts, zoneValues) {
+  const out = [{ red: startPts, blue: startPts }]
+  for (const b of blocks) {
+    const prev = out[out.length - 1]
+    const { deltaRed, deltaBlue } = computeBlockDelta(b, prev.red, prev.blue, zoneValues)
+    out.push({ red: Math.max(0, prev.red + deltaRed), blue: Math.max(0, prev.blue + deltaBlue) })
+  }
+  return out  // length 4: [before b0, after b0, after b1, after b2]
+}
 
-export default function ResultsForm() {
-  const { currentRound } = useRounds()
-  const { matches } = useRoundMatches(currentRound?.id)
-  const { fightersMap } = useFighters()
-  const { config } = useConfig()
+// Firestore payload builder
+function blockToRecords(block, startNum, scoreRed, scoreBlue, zoneValues) {
+  const records = []
+  let n = startNum
+  for (const inv of block.invalids) {
+    const pens = []
+    if (inv.penRed)  pens.push({ fighter: 'red',  type: inv.penRed  })
+    if (inv.penBlue) pens.push({ fighter: 'blue', type: inv.penBlue })
+    records.push({
+      exchange_number: n++, valid: false, invalidity_reason: 'inconclusive',
+      notes: inv.notes || null, first_hit: null, contrapaso: null,
+      is_double: false, double_red: null, double_blue: null,
+      penalties: pens, points_delta_red: 0, points_delta_blue: 0, points_rescued: 0,
+    })
+  }
+  const { deltaRed, deltaBlue, pointsRescued } = computeBlockDelta(block, scoreRed, scoreBlue, zoneValues)
+  const pens = []
+  if (block.penRed)  pens.push({ fighter: 'red',  type: block.penRed  })
+  if (block.penBlue) pens.push({ fighter: 'blue', type: block.penBlue })
+  const bothYellow = block.penRed === 'yellow' && block.penBlue === 'yellow'
+  const isPresa = block.isDouble === 'presa'
+  records.push({
+    exchange_number: n++, valid: !bothYellow,
+    invalidity_reason: bothYellow ? 'double_foul' : null, notes: null,
+    first_hit: block.isDouble === false && block.hitFirst ? { fighter: block.hitFirst, zone: block.hitZone } : null,
+    contrapaso: block.alsoHit && block.contrapasoZone ? { zone: block.contrapasoZone } : null,
+    is_double: block.isDouble === true,
+    is_presa_mutua: isPresa,
+    double_red:  block.doubleRedZone  ? { zone: block.doubleRedZone  } : null,
+    double_blue: block.doubleBlueZone ? { zone: block.doubleBlueZone } : null,
+    penalties: pens, points_delta_red: deltaRed, points_delta_blue: deltaBlue, points_rescued: pointsRescued,
+  })
+  return { records, nextNum: n }
+}
 
-  const [selectedMatchId, setSelectedMatchId] = useState(null)
-  const [exchanges, setExchanges] = useState([])
-  const [scoreRed, setScoreRed] = useState(5)
-  const [scoreBlue, setScoreBlue] = useState(5)
-  const [exch, dispatch] = useReducer(exchangeReducer, INIT_EXCHANGE)
-  const [zoneTemp, setZoneTemp] = useState(null)
-  const [showPreview, setShowPreview] = useState(false)
+// Component
+export default function ResultsForm({ initialMatchId = null }) {
+  const { currentRound }  = useRounds()
+  const { matches }       = useRoundMatches(currentRound?.id)
+  const { fightersMap }   = useFighters()
+  const { config }        = useConfig()
+
+  const [selectedMatchId, setSelectedMatchId] = useState(() => initialMatchId ?? null)
+  const [blocks, setBlocks] = useState(emptyBlocks)
   const [saving, setSaving] = useState(false)
+  const [overrideMode, setOverrideMode] = useState(false)
 
-  const activeMatches = matches.filter((m) => m.status === 'active')
-  const selectedMatch = matches.find((m) => m.id === selectedMatchId)
-  const red = selectedMatch ? fightersMap[selectedMatch.fighter_red_id] : null
+  const activeMatches  = matches.filter((m) => m.status === 'active')
+  const selectedMatch  = matches.find((m) => m.id === selectedMatchId)
+  const red  = selectedMatch ? fightersMap[selectedMatch.fighter_red_id]  : null
   const blue = selectedMatch ? fightersMap[selectedMatch.fighter_blue_id] : null
 
-  const zoneValues = config?.zone_values ?? { hand: 1, body: 2, head: 3, presa: 3 }
-  const selfDisarmBase = config?.self_disarm_base ?? 3
-  const startingPoints = config?.starting_points ?? 5
+  const zoneValues   = config?.zone_values    ?? { hand: 1, body: 2, head: 3, presa: 3 }
+  const startingPts  = config?.starting_points ?? 5
 
-  const validCount = exchanges.filter((e) => e.valid).length
-  const matchOver = scoreRed === 0 || scoreBlue === 0 || validCount >= 3
+  const scores = computeScores(blocks, startingPts, zoneValues)
+  const allComplete = blocks.every(isBlockComplete)
 
-  function selectMatch(matchId) {
-    setSelectedMatchId(matchId)
-    setExchanges([])
-    setScoreRed(startingPoints)
-    setScoreBlue(startingPoints)
-    dispatch({ type: 'RESET' })
-    setShowPreview(false)
-  }
-
-  function commitExchange() {
-    const { deltaRed, deltaBlue, pointsRescued } = computeDelta(exch, scoreRed, scoreBlue, zoneValues)
-    const newRed = Math.max(0, scoreRed + deltaRed)
-    const newBlue = Math.max(0, scoreBlue + deltaBlue)
-
-    const record = {
-      exchange_number: exchanges.length + 1,
-      valid: exch.valid,
-      invalidity_reason: exch.invalidity_reason ?? null,
-      first_hit: exch.first_hit ?? null,
-      contrapaso: exch.contrapaso ?? null,
-      is_double: exch.is_double ?? false,
-      double_red: exch.double_red ?? null,
-      double_blue: exch.double_blue ?? null,
-      penalties: exch.penalties,
-      points_delta_red: deltaRed,
-      points_delta_blue: deltaBlue,
-      points_rescued: pointsRescued,
+  // Accumulated card counts across all blocks (for header display)
+  const cards = { red: { warning: 0, yellow: 0 }, blue: { warning: 0, yellow: 0 } }
+  for (const b of blocks) {
+    for (const inv of b.invalids) {
+      if (inv.penRed  === 'warning') cards.red.warning++
+      if (inv.penRed  === 'yellow')  cards.red.yellow++
+      if (inv.penBlue === 'warning') cards.blue.warning++
+      if (inv.penBlue === 'yellow')  cards.blue.yellow++
     }
-
-    setExchanges((prev) => [...prev, record])
-    setScoreRed(newRed)
-    setScoreBlue(newBlue)
-    dispatch({ type: 'RESET' })
-    setZoneTemp(null)
+    if (b.penRed  === 'warning') cards.red.warning++
+    if (b.penRed  === 'yellow')  cards.red.yellow++
+    if (b.penBlue === 'warning') cards.blue.warning++
+    if (b.penBlue === 'yellow')  cards.blue.yellow++
   }
 
-  // Commit when wizard reaches 'done' step (via useEffect to avoid side-effect during render)
-  useEffect(() => {
-    if (exch.step === 'done') commitExchange()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exch.step])
+  function setBlock(i, updater) {
+    setBlocks((prev) => prev.map((b, idx) => idx === i ? updater(b) : b))
+  }
+
+  function selectMatch(id) { setSelectedMatchId(id); setBlocks(emptyBlocks); setOverrideMode(false) }
 
   async function handleConfirm() {
-    if (!selectedMatch || saving) return
+    if (!allComplete || saving) return
     setSaving(true)
     try {
-      let winnerId
-      if (scoreRed > scoreBlue) winnerId = selectedMatch.fighter_red_id
-      else if (scoreBlue > scoreRed) winnerId = selectedMatch.fighter_blue_id
-      else winnerId = 'draw'
-
+      const allRecords = []; let n = 1
+      for (let i = 0; i < 3; i++) {
+        const { records, nextNum } = blockToRecords(blocks[i], n, scores[i].red, scores[i].blue, zoneValues)
+        allRecords.push(...records); n = nextNum
+      }
+      const finalRed = scores[3].red, finalBlue = scores[3].blue
+      let winnerId = 'draw'
+      if (finalRed  > finalBlue) winnerId = selectedMatch.fighter_red_id
+      if (finalBlue > finalRed)  winnerId = selectedMatch.fighter_blue_id
       await completeMatch(selectedMatchId, {
-        exchanges,
-        finalScoreRed: scoreRed,
-        finalScoreBlue: scoreBlue,
-        winnerId,
-        endedEarly: (scoreRed === 0 || scoreBlue === 0) && validCount < 3,
-        endedByDepletion: scoreRed === 0 || scoreBlue === 0,
-        fighterRedId: selectedMatch.fighter_red_id,
-        fighterBlueId: selectedMatch.fighter_blue_id,
+        exchanges: allRecords, finalScoreRed: finalRed, finalScoreBlue: finalBlue, winnerId,
+        endedEarly: false, endedByDepletion: false,
+        fighterRedId: selectedMatch.fighter_red_id, fighterBlueId: selectedMatch.fighter_blue_id,
       })
-
-      setSelectedMatchId(null)
-      setExchanges([])
-      setScoreRed(startingPoints)
-      setScoreBlue(startingPoints)
-      setShowPreview(false)
-    } finally {
-      setSaving(false)
-    }
+      setSelectedMatchId(null); setBlocks(emptyBlocks)
+    } finally { setSaving(false) }
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  async function handleOverrideConfirm({ finalRed, finalBlue, note }) {
+    if (saving) return
+    setSaving(true)
+    try {
+      let winnerId = 'draw'
+      if (finalRed  > finalBlue) winnerId = selectedMatch.fighter_red_id
+      if (finalBlue > finalRed)  winnerId = selectedMatch.fighter_blue_id
+      await overrideMatch(selectedMatchId, {
+        finalScoreRed: finalRed, finalScoreBlue: finalBlue, winnerId, overrideNote: note,
+        fighterRedId: selectedMatch.fighter_red_id, fighterBlueId: selectedMatch.fighter_blue_id,
+      })
+      setSelectedMatchId(null); setBlocks(emptyBlocks); setOverrideMode(false)
+    } finally { setSaving(false) }
+  }
 
-  if (!currentRound) return <div className={styles.empty}>No hay ronda activa.</div>
-  if (activeMatches.length === 0) return <div className={styles.empty}>No hay asaltos activos en este momento.</div>
+  // Renders
+  if (!currentRound)         return <div className={styles.empty}>No hay ronda activa.</div>
+  if (!activeMatches.length) return <div className={styles.empty}>No hay asaltos activos en este momento.</div>
 
-  if (!selectedMatchId) {
-    return (
-      <div className={styles.page}>
-        <h3 className={styles.sectionTitle}>Seleccionar asalto</h3>
-        <div className={styles.matchList}>
-          {activeMatches.map((m) => {
-            const r = fightersMap[m.fighter_red_id]
-            const b = fightersMap[m.fighter_blue_id]
-            return (
-              <button key={m.id} className={styles.matchOption} onClick={() => selectMatch(m.id)}>
-                <span className={styles.arena}>#{m.match_number} · Arena {m.arena}</span>
-                <span className={styles.redName}>{r?.name ?? '—'}</span>
-                <span className={styles.vs}>vs</span>
-                <span className={styles.blueName}>{b?.name ?? '—'}</span>
-              </button>
-            )
-          })}
-        </div>
+  if (!selectedMatchId || !selectedMatch) return (
+    <div className={styles.page}>
+      <h3 className={styles.sectionTitle}>Seleccionar asalto</h3>
+      <div className={styles.matchList}>
+        {activeMatches.map((m) => {
+          const r = fightersMap[m.fighter_red_id], b = fightersMap[m.fighter_blue_id]
+          return (
+            <button key={m.id} className={styles.matchOption} onClick={() => selectMatch(m.id)}>
+              <span className={styles.arena}>#{m.match_number} · Arena {m.arena}</span>
+              <span className={styles.redName}>{r?.name ?? '—'}</span>
+              <span className={styles.vs}>vs</span>
+              <span className={styles.blueName}>{b?.name ?? '—'}</span>
+            </button>
+          )
+        })}
       </div>
-    )
-  }
-
-  if (showPreview) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.previewHeader}>
-          <span className={styles.redName}>{red?.name}</span>
-          <span className={styles.scoreBig}>{scoreRed}</span>
-          <span className={styles.dash}>—</span>
-          <span className={styles.scoreBig}>{scoreBlue}</span>
-          <span className={styles.blueName}>{blue?.name}</span>
-        </div>
-
-        <div className={styles.exchangeList}>
-          {exchanges.map((e, i) => (
-            <div key={i} className={`${styles.exchRow} ${!e.valid ? styles.exchInvalid : ''}`}>
-              <span className={styles.exchNum}>#{e.exchange_number}</span>
-              {!e.valid ? (
-                <span className={styles.exchDesc}>{INVALIDITY_REASONS.find(r => r.id === e.invalidity_reason)?.label ?? 'Inválido'}</span>
-              ) : e.is_double ? (
-                <span className={styles.exchDesc}>
-                  Doble · {e.double_red?.zone} vs {e.double_blue?.zone}
-                </span>
-              ) : (
-                <span className={styles.exchDesc}>
-                  {e.first_hit?.fighter === 'red' ? red?.name : blue?.name} → {e.first_hit?.zone}
-                  {e.contrapaso ? ` · contrapaso ${e.contrapaso.zone}` : ''}
-                </span>
-              )}
-              <span className={styles.exchDelta}>
-                {e.points_delta_red !== 0 && <span className={styles.red}>{e.points_delta_red > 0 ? '+' : ''}{e.points_delta_red}</span>}
-                {e.points_delta_blue !== 0 && <span className={styles.blue}>{e.points_delta_blue > 0 ? '+' : ''}{e.points_delta_blue}</span>}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className={styles.previewActions}>
-          <button className={styles.backBtn} onClick={() => setShowPreview(false)}>← Volver</button>
-          <button className={styles.confirmBtn} onClick={handleConfirm} disabled={saving}>
-            {saving ? 'Guardando...' : 'Confirmar y cerrar asalto'}
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Wizard de intercambio ───────────────────────────────────────────────────
+    </div>
+  )
 
   return (
     <div className={styles.page}>
-      {/* Scoreboard */}
-      <div className={styles.scoreboard}>
-        <div className={`${styles.score} ${styles.redScore}`}>
-          <span className={styles.fighterLabel}>{red?.name}</span>
-          <span className={styles.pts}>{scoreRed}</span>
+      <div className={styles.sheetHeader}>
+        <div className={styles.sheetSide}>
+          <span className={styles.redName}>{red?.name}</span>
+          <CardBadges warning={cards.red.warning} yellow={cards.red.yellow} />
         </div>
-        <div className={styles.scoreCenter}>
-          <span className={styles.exchCount}>{validCount}/3 intercambios válidos</span>
+        <span className={styles.vs}>vs</span>
+        <div className={`${styles.sheetSide} ${styles.sheetSideRight}`}>
+          <CardBadges warning={cards.blue.warning} yellow={cards.blue.yellow} />
+          <span className={styles.blueName}>{blue?.name}</span>
         </div>
-        <div className={`${styles.score} ${styles.blueScore}`}>
-          <span className={styles.pts}>{scoreBlue}</span>
-          <span className={styles.fighterLabel}>{blue?.name}</span>
-        </div>
+        <button
+          className={`${styles.overrideToggleBtn} ${overrideMode ? styles.overrideToggleBtnActive : ''}`}
+          onClick={() => setOverrideMode((v) => !v)}
+        >
+          {overrideMode ? '✕ Cancelar override' : '⚠ Override'}
+        </button>
       </div>
 
-      {matchOver ? (
-        <div className={styles.matchOverBanner}>
-          Asalto terminado · {scoreRed > scoreBlue ? red?.name : scoreBlue > scoreRed ? blue?.name : 'Empate'}
-          <button className={styles.previewBtn} onClick={() => setShowPreview(true)}>Ver resumen →</button>
-        </div>
+      {overrideMode ? (
+        <OverrideForm red={red} blue={blue} saving={saving} onConfirm={handleOverrideConfirm} />
       ) : (
-        <div className={styles.wizard}>
-          <div className={styles.wizardTitle}>Intercambio #{exchanges.length + 1}</div>
-
-          {exch.step === 'valid' && (
-            <WizardStep label="¿Fue válido este intercambio?">
-              <BtnRow>
-                <Btn onClick={() => dispatch({ type: 'SET_VALID', value: true })}>Válido</Btn>
-                <Btn onClick={() => dispatch({ type: 'SET_VALID', value: false })} secondary>Inválido</Btn>
-              </BtnRow>
-            </WizardStep>
-          )}
-
-          {exch.step === 'invalidReason' && (
-            <WizardStep label="Motivo de invalidez">
-              <BtnRow>
-                {INVALIDITY_REASONS.map((r) => (
-                  <Btn key={r.id} onClick={() => dispatch({ type: 'SET_INVALIDITY', value: r.id })}>{r.label}</Btn>
-                ))}
-              </BtnRow>
-            </WizardStep>
-          )}
-
-          {exch.step === 'type' && (
-            <WizardStep label="¿Fue un doble?">
-              <BtnRow>
-                <Btn onClick={() => dispatch({ type: 'SET_TYPE', value: false })}>No (golpe simple)</Btn>
-                <Btn onClick={() => dispatch({ type: 'SET_TYPE', value: true })} secondary>Sí, fue doble</Btn>
-              </BtnRow>
-            </WizardStep>
-          )}
-
-          {exch.step === 'firstHit' && (
-            <WizardStep label="Primer golpe">
-              <ZonePicker label="Zona del golpe" value={zoneTemp} onChange={setZoneTemp} />
-              {zoneTemp?.zone && (
-                <BtnRow>
-                  <Btn onClick={() => { dispatch({ type: 'SET_FIRST_HIT', value: { ...zoneTemp, fighter: 'red' } }); setZoneTemp(null) }}>
-                    {red?.name} (rojo)
-                  </Btn>
-                  <Btn secondary onClick={() => { dispatch({ type: 'SET_FIRST_HIT', value: { ...zoneTemp, fighter: 'blue' } }); setZoneTemp(null) }}>
-                    {blue?.name} (azul)
-                  </Btn>
-                </BtnRow>
-              )}
-            </WizardStep>
-          )}
-
-          {exch.step === 'contrapasoQ' && (
-            <WizardStep label="¿Hubo contrapaso?">
-              <BtnRow>
-                <Btn onClick={() => dispatch({ type: 'SET_CONTRAPASO_Q', value: false })}>No</Btn>
-                <Btn secondary onClick={() => dispatch({ type: 'SET_CONTRAPASO_Q', value: true })}>Sí</Btn>
-              </BtnRow>
-            </WizardStep>
-          )}
-
-          {exch.step === 'contrapaso' && (
-            <WizardStep label="Zona del contrapaso">
-              <ZonePicker value={zoneTemp} onChange={setZoneTemp} label="Zona de respuesta" />
-              {zoneTemp?.zone && (
-                <Btn onClick={() => { dispatch({ type: 'SET_CONTRAPASO', value: zoneTemp }); setZoneTemp(null) }}>
-                  Confirmar contrapaso
-                </Btn>
-              )}
-            </WizardStep>
-          )}
-
-          {exch.step === 'doubleRed' && (
-            <WizardStep label={`Zona del golpe de ${red?.name} (rojo)`}>
-              <ZonePicker value={zoneTemp} onChange={setZoneTemp} />
-              {zoneTemp?.zone && (
-                <Btn onClick={() => { dispatch({ type: 'SET_DOUBLE_RED', value: zoneTemp }); setZoneTemp(null) }}>
-                  Siguiente →
-                </Btn>
-              )}
-            </WizardStep>
-          )}
-
-          {exch.step === 'doubleBlue' && (
-            <WizardStep label={`Zona del golpe de ${blue?.name} (azul)`}>
-              <ZonePicker value={zoneTemp} onChange={setZoneTemp} />
-              {zoneTemp?.zone && (
-                <Btn onClick={() => { dispatch({ type: 'SET_DOUBLE_BLUE', value: zoneTemp }); setZoneTemp(null) }}>
-                  Siguiente →
-                </Btn>
-              )}
-            </WizardStep>
-          )}
-
-          {exch.step === 'penalties' && (
-            <WizardStep label="¿Hubo penalizaciones?">
-              {exch.penalties.map((p, i) => (
-                <div key={i} className={styles.penTag}>
-                  {p.fighter === 'red' ? red?.name : blue?.name} · {p.type} · {PENALTY_REASONS.find(r => r.id === p.reason)?.label}
-                </div>
-              ))}
-              <BtnRow>
-                <Btn secondary onClick={() => dispatch({ type: 'START_PENALTY', value: { fighter: 'red' } })}>
-                  + Penalización {red?.name}
-                </Btn>
-                <Btn secondary onClick={() => dispatch({ type: 'START_PENALTY', value: { fighter: 'blue' } })}>
-                  + Penalización {blue?.name}
-                </Btn>
-                <Btn onClick={() => dispatch({ type: 'FINISH_PENALTIES' })}>Sin más → confirmar</Btn>
-              </BtnRow>
-            </WizardStep>
-          )}
-
-          {exch.step === 'penaltyDetail' && exch.pendingPenalty && (
-            <PenaltyDetailStep
-              fighter={exch.pendingPenalty.fighter === 'red' ? red : blue}
-              onConfirm={(type, reason) => dispatch({
-                type: 'ADD_PENALTY',
-                value: { fighter: exch.pendingPenalty.fighter, type, reason },
-              })}
+        <>
+          {blocks.map((block, i) => (
+            <ExchangeBlock
+              key={i}
+              index={i}
+              block={block}
+              red={red}
+              blue={blue}
+              scoreIn={scores[i]}
+              scoreOut={scores[i + 1]}
+              zoneValues={zoneValues}
+              isFinal={i === 2}
+              finalRed={scores[3].red}
+              finalBlue={scores[3].blue}
+              onChange={(updater) => setBlock(i, updater)}
             />
-          )}
-        </div>
+          ))}
+
+          <button className={styles.confirmBtn} onClick={handleConfirm} disabled={!allComplete || saving}>
+            {saving ? 'Guardando...' : 'Confirmar y cerrar asalto'}
+          </button>
+        </>
       )}
 
-      <button className={styles.backMatchBtn} onClick={() => setSelectedMatchId(null)}>
-        ← Cambiar asalto
+      <button className={styles.backMatchBtn} onClick={() => setSelectedMatchId(null)}>← Cambiar asalto</button>
+    </div>
+  )
+}
+
+// OverrideForm — corrección manual de mesa, bypassea el cálculo por intercambio
+function OverrideForm({ red, blue, saving, onConfirm }) {
+  const [scoreRed, setScoreRed] = useState('')
+  const [scoreBlue, setScoreBlue] = useState('')
+  const [note, setNote] = useState('')
+
+  const finalRed = Number(scoreRed)
+  const finalBlue = Number(scoreBlue)
+  const validScores = scoreRed !== '' && scoreBlue !== '' && !Number.isNaN(finalRed) && !Number.isNaN(finalBlue)
+  const canConfirm = validScores && note.trim().length > 0 && !saving
+
+  return (
+    <div className={styles.overrideForm}>
+      <p className={styles.overrideHint}>
+        Corrección manual de mesa — carga el puntaje final directo, sin registrar intercambios. Requiere nota editorial.
+      </p>
+      <div className={styles.overrideScores}>
+        <label className={styles.overrideScoreField}>
+          <span className={styles.redName}>{red?.name}</span>
+          <input
+            type="number" min="0" className={styles.overrideScoreInput}
+            value={scoreRed} onChange={(e) => setScoreRed(e.target.value)}
+          />
+        </label>
+        <span className={styles.scoreDash}>—</span>
+        <label className={styles.overrideScoreField}>
+          <span className={styles.blueName}>{blue?.name}</span>
+          <input
+            type="number" min="0" className={styles.overrideScoreInput}
+            value={scoreBlue} onChange={(e) => setScoreBlue(e.target.value)}
+          />
+        </label>
+      </div>
+      <textarea
+        className={styles.overrideNoteInput}
+        placeholder="Nota editorial (obligatoria) — qué pasó y por qué se corrige a mano"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={3}
+      />
+      <button
+        className={styles.confirmBtn}
+        disabled={!canConfirm}
+        onClick={() => onConfirm({ finalRed, finalBlue, note: note.trim() })}
+      >
+        {saving ? 'Guardando...' : 'Confirmar override y cerrar asalto'}
       </button>
     </div>
   )
 }
 
-// ── Sub-componentes del wizard ────────────────────────────────────────────────
+// Zona activa de un lado, derivada del estado del bloque (para resaltar el botón tocado)
+function zoneForSide(block, side) {
+  if (block.isDouble === true) return side === 'red' ? block.doubleRedZone : block.doubleBlueZone
+  if (block.isDouble === false) {
+    if (block.hitFirst === side) return block.hitZone
+    if (block.hitFirst && block.hitFirst !== side && block.alsoHit) return block.contrapasoZone
+  }
+  return null
+}
 
-function WizardStep({ label, children }) {
+// Rol del toque para ese lado — solo afecta el estilo (ataque vs. contrapaso vs. doble)
+function zoneRoleForSide(block, side) {
+  if (block.isDouble === true) return zoneForSide(block, side) ? 'double' : null
+  if (block.isDouble === false) {
+    if (block.hitFirst === side && block.hitZone) return 'attack'
+    if (block.hitFirst && block.hitFirst !== side && block.alsoHit && block.contrapasoZone) return 'contra'
+  }
+  return null
+}
+
+// ExchangeBlock — planilla eidética: tocar el valor de un tirador reemplaza el flow de radios
+function ExchangeBlock({ index, block, red, blue, scoreIn, zoneValues, isFinal, finalRed, finalBlue, onChange }) {
+  const complete = isBlockComplete(block)
+  const { deltaRed, deltaBlue } = computeBlockDelta(block, scoreIn.red, scoreIn.blue, zoneValues)
+  const bothYellow = block.penRed === 'yellow' && block.penBlue === 'yellow'
+
+  function set(field, value) { onChange((b) => ({ ...b, [field]: value })) }
+
+  function addInvalid()        { onChange((b) => ({ ...b, invalids: [...b.invalids, emptyInvalid()] })) }
+  function removeInvalid(j)    { onChange((b) => ({ ...b, invalids: b.invalids.filter((_, i) => i !== j) })) }
+  function setInvalid(j, f, v) { onChange((b) => ({ ...b, invalids: b.invalids.map((inv, i) => i === j ? { ...inv, [f]: v } : inv) })) }
+
+  function toggleMode(mode) {
+    const target = mode === 'double' ? true : 'presa'
+    const next = block.isDouble === target ? null : target
+    onChange((b) => ({
+      ...b, isDouble: next, hitFirst: null, hitZone: null, alsoHit: null, contrapasoZone: null,
+      doubleRedZone: null, doubleBlueZone: null,
+    }))
+  }
+
+  function handleTap(side, zone) {
+    if (block.isDouble === 'presa') return
+
+    if (block.isDouble === true) {
+      const field = side === 'red' ? 'doubleRedZone' : 'doubleBlueZone'
+      const current = side === 'red' ? block.doubleRedZone : block.doubleBlueZone
+      set(field, current === zone ? null : zone)
+      return
+    }
+
+    // Sin ataque marcado todavía: este toque es el golpe inicial del intercambio
+    if (!block.hitFirst) {
+      onChange((b) => ({ ...b, isDouble: false, hitFirst: side, hitZone: zone, alsoHit: false, contrapasoZone: null }))
+      return
+    }
+
+    // Toque del mismo lado que ya atacó: corrige la zona, o deshace si es la misma
+    if (block.hitFirst === side) {
+      if (block.hitZone === zone) {
+        onChange((b) => ({ ...b, isDouble: null, hitFirst: null, hitZone: null, alsoHit: null, contrapasoZone: null }))
+      } else {
+        set('hitZone', zone)
+      }
+      return
+    }
+
+    // Toque del otro lado: contrapaso (rescata puntos, no resta de forma independiente)
+    if (block.alsoHit && block.contrapasoZone === zone) {
+      onChange((b) => ({ ...b, alsoHit: false, contrapasoZone: null }))
+    } else {
+      onChange((b) => ({ ...b, alsoHit: true, contrapasoZone: zone }))
+    }
+  }
+
   return (
-    <div className={styles.step}>
-      <div className={styles.stepLabel}>{label}</div>
-      {children}
+    <div className={styles.exchBlock}>
+      {/* Invalids before this exchange */}
+      <div className={styles.invalidsSection}>
+        <div className={styles.invalidsHeader}>
+          <span className={styles.invalidsLabel}>Inválidos antes del intercambio {index + 1}</span>
+          <button className={styles.addInvalidBtn} onClick={addInvalid}>+ Agregar inválido</button>
+        </div>
+        {block.invalids.map((inv, j) => (
+          <div key={j} className={styles.invalidRow}>
+            <input
+              className={styles.notesInput}
+              placeholder="Notas"
+              value={inv.notes}
+              onChange={(e) => setInvalid(j, 'notes', e.target.value)}
+            />
+            <PenToggle label={red?.name}  value={inv.penRed}  onChange={(v) => setInvalid(j, 'penRed',  v)} isRed />
+            <PenToggle label={blue?.name} value={inv.penBlue} onChange={(v) => setInvalid(j, 'penBlue', v)} />
+            <button className={styles.removeInvalidBtn} onClick={() => removeInvalid(j)}>✕</button>
+          </div>
+        ))}
+      </div>
+
+      {/* Valid exchange — grilla de 3 columnas imitando la planilla física */}
+      <div className={styles.exchGrid}>
+        <div className={styles.exchGridHeader}>
+          <span className={styles.exchGridTitle}>Intercambio {index + 1}</span>
+          <span className={styles.scoreIn}>
+            <span className={styles.redName}>{scoreIn.red}</span>
+            <span className={styles.scoreDash}> — </span>
+            <span className={styles.blueName}>{scoreIn.blue}</span>
+          </span>
+        </div>
+
+        <div className={styles.tapGrid}>
+          <ZoneButtons
+            zoneValues={zoneValues}
+            selectedZone={zoneForSide(block, 'red')}
+            role={zoneRoleForSide(block, 'red')}
+            disabled={block.isDouble === 'presa'}
+            red
+            onTap={(zone) => handleTap('red', zone)}
+          />
+
+          <div className={styles.modeColumn}>
+            <ModePill active={block.isDouble === true} onClick={() => toggleMode('double')}>Doble</ModePill>
+            <ModePill active={block.isDouble === 'presa'} onClick={() => toggleMode('presa')}>Presa mutua</ModePill>
+            {block.isDouble === false && block.hitFirst && block.alsoHit && (
+              <span className={styles.contraTag}>contrapaso {block.hitFirst === 'red' ? blue?.name : red?.name}</span>
+            )}
+          </div>
+
+          <ZoneButtons
+            zoneValues={zoneValues}
+            selectedZone={zoneForSide(block, 'blue')}
+            role={zoneRoleForSide(block, 'blue')}
+            disabled={block.isDouble === 'presa'}
+            onTap={(zone) => handleTap('blue', zone)}
+          />
+        </div>
+
+        {block.isDouble !== null && (
+          <div className={styles.exchPenRow}>
+            <PenToggle label={red?.name}  value={block.penRed}  onChange={(v) => set('penRed',  v)} isRed />
+            <PenToggle label={blue?.name} value={block.penBlue} onChange={(v) => set('penBlue', v)} />
+          </div>
+        )}
+
+        {complete && !bothYellow && (
+          <div className={styles.diffRow}>
+            <span className={styles.diffLabel}>Diferencia</span>
+            <span className={deltaRed  > 0 ? styles.redPos  : deltaRed  < 0 ? styles.redNeg  : styles.neutral}>{deltaRed  > 0 ? '+' : ''}{deltaRed}</span>
+            <span className={styles.scoreDash}> / </span>
+            <span className={deltaBlue > 0 ? styles.bluePos : deltaBlue < 0 ? styles.blueNeg : styles.neutral}>{deltaBlue > 0 ? '+' : ''}{deltaBlue}</span>
+          </div>
+        )}
+        {complete && bothYellow && (
+          <div className={styles.diffRow}><span className={styles.invalidTag}>Doble amarilla — intercambio no cuenta</span></div>
+        )}
+
+        {isFinal && (
+          <div className={styles.finalRow}>
+            <span className={styles.finalLabel}>Puntaje Final</span>
+            <span>
+              <span className={styles.redName}>{finalRed}</span>
+              <span className={styles.scoreDash}> — </span>
+              <span className={styles.blueName}>{finalBlue}</span>
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-function BtnRow({ children }) {
-  return <div className={styles.btnRow}>{children}</div>
+// ZoneButtons — 3 botones de valor (mano/cuerpo/cabeza) + pastilla "Presa", para un tirador
+function ZoneButtons({ zoneValues, selectedZone, role, disabled, red, onTap }) {
+  return (
+    <div className={styles.zoneButtons}>
+      {PRIMARY_ZONES.map((z) => (
+        <button
+          key={z}
+          type="button"
+          disabled={disabled}
+          className={[
+            styles.zoneBtn,
+            red ? styles.zoneBtnRed : styles.zoneBtnBlue,
+            selectedZone === z ? (role === 'contra' ? styles.zoneBtnContra : styles.zoneBtnActive) : '',
+          ].filter(Boolean).join(' ')}
+          onClick={() => onTap(z)}
+        >
+          {zoneValues[z]}
+        </button>
+      ))}
+      <button
+        type="button"
+        disabled={disabled}
+        className={[
+          styles.presaBtn,
+          selectedZone === 'presa' ? (role === 'contra' ? styles.zoneBtnContra : styles.zoneBtnActive) : '',
+        ].filter(Boolean).join(' ')}
+        onClick={() => onTap('presa')}
+      >
+        Presa
+      </button>
+    </div>
+  )
 }
 
-function Btn({ children, onClick, secondary }) {
+// ModePill
+function ModePill({ children, active, onClick }) {
   return (
-    <button
-      className={`${styles.wBtn} ${secondary ? styles.wBtnSecondary : ''}`}
-      onClick={onClick}
-      type="button"
-    >
+    <button type="button" className={`${styles.modePill} ${active ? styles.modePillActive : ''}`} onClick={onClick}>
       {children}
     </button>
   )
 }
 
-function PenaltyDetailStep({ fighter, onConfirm }) {
-  const [type, setType] = useState(null)
-  const [reason, setReason] = useState(null)
+// PenToggle
 
+function PenToggle({ label, value, onChange, isRed }) {
   return (
-    <div className={styles.step}>
-      <div className={styles.stepLabel}>Penalización para {fighter?.name}</div>
-      <div className={styles.stepLabel}>Tipo:</div>
-      <BtnRow>
-        {PENALTY_TYPES.map((t) => (
+    <div className={styles.penToggle}>
+      <span className={`${styles.penLabel} ${isRed ? styles.redName : styles.blueName}`}>{label}</span>
+      <div className={styles.penOpts}>
+        {[{ id: 'warning', lab: 'Adv' }, { id: 'yellow', lab: 'Am' }].map((o) => (
           <button
-            key={t.id}
-            className={`${styles.wBtn} ${type === t.id ? styles.wBtnSelected : styles.wBtnSecondary}`}
-            onClick={() => setType(t.id)}
+            key={o.id}
+            type="button"
+            className={`${styles.penOpt} ${value === o.id ? (o.id === 'yellow' ? styles.penOptYellow : styles.penOptWarn) : ''}`}
+            onClick={() => onChange(value === o.id ? null : o.id)}
           >
-            {t.label}
+            {o.lab}
           </button>
         ))}
-      </BtnRow>
-      {type && (
-        <>
-          <div className={styles.stepLabel}>Motivo:</div>
-          <div className={styles.btnRow} style={{ flexWrap: 'wrap' }}>
-            {PENALTY_REASONS.map((r) => (
-              <button
-                key={r.id}
-                className={`${styles.wBtn} ${reason === r.id ? styles.wBtnSelected : styles.wBtnSecondary}`}
-                onClick={() => setReason(r.id)}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
-      {type && reason && (
-        <Btn onClick={() => onConfirm(type, reason)}>Confirmar penalización</Btn>
-      )}
+      </div>
     </div>
   )
 }
+
+// CardBadges
+function CardBadges({ warning, yellow }) {
+  return (
+    <span className={styles.cardBadges}>
+      {warning > 0 && <span className={styles.badgeAdv}>Adv ×{warning}</span>}
+      {yellow  > 0 && <span className={styles.badgeYellow}>Am ×{yellow}</span>}
+    </span>
+  )
+}
+
+

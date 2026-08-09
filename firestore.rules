@@ -60,6 +60,15 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── Control stats (contadores acumulados de árbitro/juez, todo el evento) ──
+    match /control_stats/{fighterId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasOnly(['referee_count', 'judge_count']);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['referee_count', 'judge_count']);
+      allow delete: if false;
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     function isValidRound(data) {
@@ -79,23 +88,31 @@ service cloud.firestore {
       let changed = newData.diff(oldData).affectedKeys();
       // Activación: asignar arena
       let activationKeys = ['status', 'arena', 'activated_at'].toSet();
-      // Cierre: resultado final
+      // Cierre: resultado final (incluye override de mesa)
       let completionKeys = ['status', 'final_score_red', 'final_score_blue', 'winner_id',
-                            'ended_early', 'ended_by_depletion'].toSet();
+                            'ended_early', 'ended_by_depletion',
+                            'override', 'override_note', 'overridden_at'].toSet();
       // Cancelación
       let cancellationKeys = ['status'].toSet();
       // Control body update
       let controlBodyKeys = ['referee_id', 'judge_1_id', 'judge_2_id',
-                              'same_club_warning', 'rerolled'].toSet();
-      return changed.hasOnly(activationKeys)
+                              'same_club_warning', 'fairness_warning', 'role_mismatch_warning',
+                              'rerolled'].toSet();
+      // Si se está marcando override, exigir nota editorial no vacía
+      let overrideOk = !changed.hasAny(['override'])
+          || newData.override != true
+          || (newData.override_note is string && newData.override_note.size() > 0);
+      return overrideOk && (
+             changed.hasOnly(activationKeys)
           || changed.hasOnly(completionKeys)
           || changed.hasOnly(cancellationKeys)
-          || changed.hasOnly(controlBodyKeys);
+          || changed.hasOnly(controlBodyKeys));
     }
 
     function isValidExchange(data) {
-      return data.keys().hasAll(['type', 'round_number'])
-          && data.type in ['normal', 'invalid', 'contrapaso', 'double', 'bye'];
+      return data.keys().hasAll(['exchange_number', 'valid', 'points_delta_red', 'points_delta_blue'])
+          && data.exchange_number is int
+          && data.valid is bool;
     }
   }
 }
