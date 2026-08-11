@@ -334,7 +334,7 @@ function zoneRoleForSide(block, side) {
 // ExchangeBlock — planilla eidética: tocar el valor de un tirador reemplaza el flow de radios
 function ExchangeBlock({ index, block, red, blue, scoreIn, zoneValues, isFinal, finalRed, finalBlue, onChange }) {
   const complete = isBlockComplete(block)
-  const { deltaRed, deltaBlue } = computeBlockDelta(block, scoreIn.red, scoreIn.blue, zoneValues)
+  const { deltaRed, deltaBlue, pointsRescued } = computeBlockDelta(block, scoreIn.red, scoreIn.blue, zoneValues)
   const bothYellow = block.penRed === 'yellow' && block.penBlue === 'yellow'
 
   function set(field, value) { onChange((b) => ({ ...b, [field]: value })) }
@@ -439,7 +439,9 @@ function ExchangeBlock({ index, block, red, blue, scoreIn, zoneValues, isFinal, 
             <ModePill active={block.isDouble === true} onClick={() => toggleMode('double')}>Doble</ModePill>
             <ModePill active={block.isDouble === 'presa'} onClick={() => toggleMode('presa')}>Presa mutua</ModePill>
             {block.isDouble === false && block.hitFirst && block.alsoHit && (
-              <span className={styles.contraTag}>contrapaso {block.hitFirst === 'red' ? blue?.name : red?.name}</span>
+              <span className={styles.contraTag}>
+                {block.hitFirst === 'red' ? blue?.name : red?.name} ejecuta contrapaso, anula {pointsRescued} {pointsRescued === 1 ? 'punto' : 'puntos'} del golpe inicial
+              </span>
             )}
           </div>
 
