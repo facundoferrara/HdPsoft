@@ -308,22 +308,25 @@ function OverrideForm({ red, blue, saving, onConfirm }) {
   )
 }
 
-// Zona activa de un lado, derivada del estado del bloque (para resaltar el botón tocado)
+// Zona activa de un lado, derivada del estado del bloque (para resaltar el botón tocado).
+// La columna de cada tirador marca los puntos que ESE tirador perdió (fue golpeado) —
+// por eso el golpe principal se muestra en la columna de la víctima (hitFirst !== side)
+// y el contrapaso (el atacante también fue tocado) en la columna del propio atacante.
 function zoneForSide(block, side) {
   if (block.isDouble === true) return side === 'red' ? block.doubleRedZone : block.doubleBlueZone
   if (block.isDouble === false) {
-    if (block.hitFirst === side) return block.hitZone
-    if (block.hitFirst && block.hitFirst !== side && block.alsoHit) return block.contrapasoZone
+    if (block.hitFirst && block.hitFirst !== side) return block.hitZone
+    if (block.hitFirst === side && block.alsoHit) return block.contrapasoZone
   }
   return null
 }
 
-// Rol del toque para ese lado — solo afecta el estilo (ataque vs. contrapaso vs. doble)
+// Rol del toque para ese lado — solo afecta el estilo (golpe recibido vs. contrapaso vs. doble)
 function zoneRoleForSide(block, side) {
   if (block.isDouble === true) return zoneForSide(block, side) ? 'double' : null
   if (block.isDouble === false) {
-    if (block.hitFirst === side && block.hitZone) return 'attack'
-    if (block.hitFirst && block.hitFirst !== side && block.alsoHit && block.contrapasoZone) return 'contra'
+    if (block.hitFirst && block.hitFirst !== side && block.hitZone) return 'hit'
+    if (block.hitFirst === side && block.alsoHit && block.contrapasoZone) return 'contra'
   }
   return null
 }
@@ -349,6 +352,8 @@ function ExchangeBlock({ index, block, red, blue, scoreIn, zoneValues, isFinal, 
     }))
   }
 
+  // Tocar la columna de un tirador marca que ESE tirador fue golpeado por esa cantidad
+  // de puntos (por eso los botones muestran valores negativos) — el atacante es el otro lado.
   function handleTap(side, zone) {
     if (block.isDouble === 'presa') return
 
@@ -359,14 +364,16 @@ function ExchangeBlock({ index, block, red, blue, scoreIn, zoneValues, isFinal, 
       return
     }
 
-    // Sin ataque marcado todavía: este toque es el golpe inicial del intercambio
+    const attacker = side === 'red' ? 'blue' : 'red'
+
+    // Sin golpe marcado todavía: este toque es el golpe inicial del intercambio — side es la víctima
     if (!block.hitFirst) {
-      onChange((b) => ({ ...b, isDouble: false, hitFirst: side, hitZone: zone, alsoHit: false, contrapasoZone: null }))
+      onChange((b) => ({ ...b, isDouble: false, hitFirst: attacker, hitZone: zone, alsoHit: false, contrapasoZone: null }))
       return
     }
 
-    // Toque del mismo lado que ya atacó: corrige la zona, o deshace si es la misma
-    if (block.hitFirst === side) {
+    // Toque en la columna de la víctima ya marcada: corrige la zona, o deshace si es la misma
+    if (block.hitFirst === attacker) {
       if (block.hitZone === zone) {
         onChange((b) => ({ ...b, isDouble: null, hitFirst: null, hitZone: null, alsoHit: null, contrapasoZone: null }))
       } else {
@@ -375,7 +382,7 @@ function ExchangeBlock({ index, block, red, blue, scoreIn, zoneValues, isFinal, 
       return
     }
 
-    // Toque del otro lado: contrapaso (rescata puntos, no resta de forma independiente)
+    // Toque en la propia columna del atacante: contrapaso (también fue golpeado, rescata puntos)
     if (block.alsoHit && block.contrapasoZone === zone) {
       onChange((b) => ({ ...b, alsoHit: false, contrapasoZone: null }))
     } else {
@@ -498,7 +505,7 @@ function ZoneButtons({ name, zoneValues, selectedZone, role, disabled, red, onTa
             ].filter(Boolean).join(' ')}
             onClick={() => onTap(z)}
           >
-            {zoneValues[z]}
+            −{zoneValues[z]}
           </button>
         ))}
       </div>
