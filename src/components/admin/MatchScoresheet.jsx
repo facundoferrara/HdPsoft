@@ -419,7 +419,7 @@ function ExchangeBlock({ index, block, red, blue, scoreIn, zoneValues, isFinal, 
           <span className={styles.exchGridTitle}>Intercambio {index + 1}</span>
           <span className={styles.scoreIn}>
             <span className={styles.redName}>{scoreIn.red}</span>
-            <span className={styles.scoreDash}> — </span>
+            <span className={styles.scoreDash}>—</span>
             <span className={styles.blueName}>{scoreIn.blue}</span>
           </span>
         </div>

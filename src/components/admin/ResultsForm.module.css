@@ -123,10 +123,17 @@
 }
 
 .exchGridHeader {
-  display: flex; align-items: baseline; justify-content: space-between;
+  position: relative;
+  display: flex; align-items: baseline; justify-content: flex-start;
+  min-height: 1.7rem;
+  padding-bottom: 0.2rem;
 }
 .exchGridTitle { font-size: 0.78rem; color: #555; text-transform: uppercase; letter-spacing: 0.07em; }
-.scoreIn { font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.scoreIn {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: flex; align-items: baseline; gap: 0.6rem;
+  font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
 .scoreDash { color: #444; }
 
 /* ── Tap grid — planilla eidética ────────────────────────────────────────── */
