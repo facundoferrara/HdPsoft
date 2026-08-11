@@ -4,7 +4,7 @@ import { matchesRef } from '../../firebase/db'
 import { useFighters } from '../../hooks/useFighters'
 import styles from './ArenaStatus.module.css'
 
-const ARENAS = [1, 2, 3, 4]
+const ARENAS = [1, 2, 3]
 
 export default function ArenaStatus() {
   const [activeMatches, setActiveMatches] = useState([])

@@ -25,6 +25,11 @@ export async function cancelMatch(matchId) {
   await updateDoc(doc(db, 'matches', matchId), { status: 'cancelled', arena: null })
 }
 
+/** Libera una arena: vuelve el asalto a 'pending' sin arena, para reasignar otro en su lugar. */
+export async function deactivateMatch(matchId) {
+  await updateDoc(doc(db, 'matches', matchId), { status: 'pending', arena: null })
+}
+
 // ── Reroll de cuerpo de control ───────────────────────────────────────────────
 
 /**

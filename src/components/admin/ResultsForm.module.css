@@ -27,14 +27,18 @@
 
 /* ── Sheet header ────────────────────────────────────────────────────────── */
 .sheetHeader {
+  position: relative;
   display: flex; align-items: center; justify-content: space-between;
-  gap: 0.75rem; padding: 0.75rem 1rem;
+  gap: 0.75rem; padding: 0.75rem 7.5rem 0.75rem 1rem;
   background: #141414; border: 1px solid #222; border-radius: 8px;
 }
 .sheetSide { display: flex; align-items: center; gap: 0.5rem; }
 .sheetSideRight { flex-direction: row-reverse; }
 
+/* Posicionado absoluto: no participa del space-between rojo/vs/azul, así ese
+   trio queda simétrico sin importar el ancho de este botón. */
 .overrideToggleBtn {
+  position: absolute; top: 0.55rem; right: 0.75rem;
   padding: 0.3rem 0.7rem; background: #1a1a1a; border: 1px solid #444;
   border-radius: 14px; color: #999; font-size: 0.72rem; font-weight: 600; cursor: pointer;
 }
@@ -126,11 +130,22 @@
 }
 
 .zoneButtons {
-  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+}
+
+.zoneButtonsName {
+  font-size: 0.78rem; font-weight: 700; text-align: center;
+  max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* column-reverse: PRIMARY_ZONES = [hand,body,head] = [1,2,3] en ese orden en el DOM,
+   pero se pintan de arriba hacia abajo como 3,2,1 — sin tocar el array ni la lógica de zonas. */
+.zoneStack {
+  display: flex; flex-direction: column-reverse; gap: 0.4rem;
 }
 
 .zoneBtn {
-  min-width: 44px; padding: 0.5rem 0; text-align: center;
+  width: 52px; padding: 0.5rem 0; text-align: center;
   background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 6px;
   color: #999; font-size: 1.05rem; font-weight: 700;
   cursor: pointer; transition: background 0.1s, color 0.1s, border-color 0.1s;
@@ -146,7 +161,7 @@
 .zoneBtnContra              { background: #2a2210; border-color: #f5c518; color: #f5c518; }
 
 .presaBtn {
-  padding: 0.3rem 0.6rem; align-self: center;
+  width: 52px; padding: 0.3rem 0;
   background: #161616; border: 1px dashed #333; border-radius: 12px;
   color: #777; font-size: 0.72rem; font-weight: 600; cursor: pointer;
 }

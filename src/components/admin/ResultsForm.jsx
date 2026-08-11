@@ -439,6 +439,7 @@ function ExchangeBlock({ index, block, red, blue, scoreIn, zoneValues, isFinal, 
 
         <div className={styles.tapGrid}>
           <ZoneButtons
+            name={red?.name}
             zoneValues={zoneValues}
             selectedZone={zoneForSide(block, 'red')}
             role={zoneRoleForSide(block, 'red')}
@@ -456,6 +457,7 @@ function ExchangeBlock({ index, block, red, blue, scoreIn, zoneValues, isFinal, 
           </div>
 
           <ZoneButtons
+            name={blue?.name}
             zoneValues={zoneValues}
             selectedZone={zoneForSide(block, 'blue')}
             role={zoneRoleForSide(block, 'blue')}
@@ -498,25 +500,28 @@ function ExchangeBlock({ index, block, red, blue, scoreIn, zoneValues, isFinal, 
   )
 }
 
-// ZoneButtons — 3 botones de valor (mano/cuerpo/cabeza) + pastilla "Presa", para un tirador
-function ZoneButtons({ zoneValues, selectedZone, role, disabled, red, onTap }) {
+// ZoneButtons — nombre + 3 botones de valor (mano/cuerpo/cabeza, 3 arriba) + pastilla "Presa"
+function ZoneButtons({ name, zoneValues, selectedZone, role, disabled, red, onTap }) {
   return (
     <div className={styles.zoneButtons}>
-      {PRIMARY_ZONES.map((z) => (
-        <button
-          key={z}
-          type="button"
-          disabled={disabled}
-          className={[
-            styles.zoneBtn,
-            red ? styles.zoneBtnRed : styles.zoneBtnBlue,
-            selectedZone === z ? (role === 'contra' ? styles.zoneBtnContra : styles.zoneBtnActive) : '',
-          ].filter(Boolean).join(' ')}
-          onClick={() => onTap(z)}
-        >
-          {zoneValues[z]}
-        </button>
-      ))}
+      <span className={`${styles.zoneButtonsName} ${red ? styles.redName : styles.blueName}`}>{name}</span>
+      <div className={styles.zoneStack}>
+        {PRIMARY_ZONES.map((z) => (
+          <button
+            key={z}
+            type="button"
+            disabled={disabled}
+            className={[
+              styles.zoneBtn,
+              red ? styles.zoneBtnRed : styles.zoneBtnBlue,
+              selectedZone === z ? (role === 'contra' ? styles.zoneBtnContra : styles.zoneBtnActive) : '',
+            ].filter(Boolean).join(' ')}
+            onClick={() => onTap(z)}
+          >
+            {zoneValues[z]}
+          </button>
+        ))}
+      </div>
       <button
         type="button"
         disabled={disabled}

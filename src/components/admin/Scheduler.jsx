@@ -8,14 +8,14 @@ import { useLeaderboard } from '../../hooks/useLeaderboard'
 import { useControlStats } from '../../hooks/useControlStats'
 import { generatePairings, pairKey } from '../../utils/pairing'
 import { assignControlBody, getCandidatesForReroll } from '../../utils/controlBody'
-import { generateRound, activateMatch, updateMatchControlBody, registerBye, cancelRound } from '../../firebase/writes'
+import { generateRound, activateMatch, deactivateMatch, updateMatchControlBody, registerBye, cancelRound } from '../../firebase/writes'
 import { calcCalibrationPoints } from '../../utils/scoring'
 import { matchesRef } from '../../firebase/db'
 import ArenaDropZone from './ArenaDropZone'
 import MatchCard from './MatchCard'
 import styles from './Scheduler.module.css'
 
-const ARENAS = [1, 2, 3, 4]
+const ARENAS = [1, 2, 3]
 
 export default function Scheduler({ onRoundComplete, onSelectActiveMatch }) {
   const { currentRound, nextRoundNumber } = useRounds()
@@ -66,10 +66,15 @@ export default function Scheduler({ onRoundComplete, onSelectActiveMatch }) {
     if (!over) return
     const matchId = active.id
     const arena = Number(over.id)
-    if (!arena || arena < 1 || arena > 4) return
+    if (!arena || arena < 1 || arena > ARENAS.length) return
     const match = matches.find((m) => m.id === matchId)
     if (!match || match.status !== 'pending' || isBlocked(match)) return
+    if (activeMatchByArena(arena)) return // arena ya ocupada — evita pisar un asalto activo
     await activateMatch(matchId, arena)
+  }
+
+  async function handleDeactivate(matchId) {
+    await deactivateMatch(matchId)
   }
 
   // ── Generación de ronda ────────────────────────────────────────────────────
@@ -236,6 +241,7 @@ export default function Scheduler({ onRoundComplete, onSelectActiveMatch }) {
                 activeMatch={activeMatchByArena(arena)}
                 fightersMap={fightersMap}
                 onSelect={onSelectActiveMatch}
+                onDeactivate={handleDeactivate}
               />
             ))}
           </div>
@@ -254,6 +260,7 @@ export default function Scheduler({ onRoundComplete, onSelectActiveMatch }) {
                     onReroll={handleReroll}
                     candidates={getEligibleForMatch(match)}
                     onAssignRole={handleAssignRole}
+                    onDeactivate={handleDeactivate}
                   />
                 ))}
               </div>

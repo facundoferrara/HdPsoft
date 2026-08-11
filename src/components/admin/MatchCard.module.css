@@ -179,3 +179,16 @@
   transition: background 0.1s, color 0.1s;
 }
 .rerollBtn:hover { background: #2a2a2a; color: #ccc; }
+
+.deactivateBtn {
+  align-self: flex-end;
+  padding: 0.2rem 0.6rem;
+  background: #1a1414;
+  border: 1px solid #4a2a2a;
+  border-radius: 4px;
+  color: #d08080;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.deactivateBtn:hover { background: #2a1a1a; color: #f5a0a0; border-color: #6a3a3a; }

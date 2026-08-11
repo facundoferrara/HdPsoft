@@ -7,9 +7,9 @@ const TIER_COLOR = { boffer: '#42a5f5', nylon: '#ab47bc', acero: '#81c784' }
 
 /**
  * Tarjeta de asalto del Scheduler.
- * @param {{ match, fightersMap, isBlocked, onReroll, candidates, onAssignRole }} props
+ * @param {{ match, fightersMap, isBlocked, onReroll, candidates, onAssignRole, onDeactivate }} props
  */
-export default function MatchCard({ match, fightersMap, isBlocked, onReroll, candidates = [], onAssignRole }) {
+export default function MatchCard({ match, fightersMap, isBlocked, onReroll, candidates = [], onAssignRole, onDeactivate }) {
   const isDraggable = match.status === 'pending' && !isBlocked
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: match.id,
@@ -101,6 +101,15 @@ export default function MatchCard({ match, fightersMap, isBlocked, onReroll, can
           onClick={(e) => { e.stopPropagation(); onReroll(match) }}
         >
           ↺ Reroll
+        </button>
+      )}
+
+      {match.status === 'active' && onDeactivate && (
+        <button
+          className={styles.deactivateBtn}
+          onClick={(e) => { e.stopPropagation(); onDeactivate(match.id) }}
+        >
+          ✕ Liberar arena
         </button>
       )}
     </div>

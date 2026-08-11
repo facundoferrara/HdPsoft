@@ -5,8 +5,8 @@ import styles from './ArenaDropZone.module.css'
  * Zona de drop para una arena. Muestra el asalto activo si lo hay.
  * @param {{ arena: number, activeMatch: object|null, fightersMap: object }} props
  */
-export default function ArenaDropZone({ arena, activeMatch, fightersMap, onSelect }) {
-  const { setNodeRef, isOver } = useDroppable({ id: String(arena) })
+export default function ArenaDropZone({ arena, activeMatch, fightersMap, onSelect, onDeactivate }) {
+  const { setNodeRef, isOver } = useDroppable({ id: String(arena), disabled: !!activeMatch })
 
   const red = activeMatch ? fightersMap[activeMatch.fighter_red_id] : null
   const blue = activeMatch ? fightersMap[activeMatch.fighter_blue_id] : null
@@ -32,6 +32,13 @@ export default function ArenaDropZone({ arena, activeMatch, fightersMap, onSelec
           <div className={styles.control}>
             Árb: {referee?.name ?? '—'} · Jueces: {judge1?.name ?? '—'} / {judge2?.name ?? '—'}
           </div>
+          <button
+            type="button"
+            className={styles.deactivateBtn}
+            onClick={(e) => { e.stopPropagation(); onDeactivate?.(activeMatch.id) }}
+          >
+            ✕ Liberar arena
+          </button>
         </div>
       ) : (
         <div className={styles.placeholder}>
