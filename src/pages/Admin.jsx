@@ -19,16 +19,10 @@ const TABS = [
 
 function AdminLayout() {
   const [activeTab, setActiveTab] = useState('scheduler')
-  const [pendingResultMatchId, setPendingResultMatchId] = useState(null)
   const [showBreakPopup, setShowBreakPopup] = useState(false)
   const { eventStatus } = useEventStatus()
 
   const isBreak = eventStatus?.status === 'break'
-
-  function selectTab(tabId) {
-    setActiveTab(tabId)
-    setPendingResultMatchId(null)
-  }
 
   return (
     <div className={styles.page}>
@@ -39,7 +33,7 @@ function AdminLayout() {
             <button
               key={tab.id}
               className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ''}`}
-              onClick={() => selectTab(tab.id)}
+              onClick={() => setActiveTab(tab.id)}
             >
               {tab.label}
             </button>
@@ -73,13 +67,10 @@ function AdminLayout() {
         {activeTab === 'scheduler' && (
           <>
             <RoundProjection />
-            <Scheduler
-              onRoundComplete={() => setShowBreakPopup(true)}
-              onSelectActiveMatch={(matchId) => { setPendingResultMatchId(matchId); setActiveTab('results') }}
-            />
+            <Scheduler onRoundComplete={() => setShowBreakPopup(true)} />
           </>
         )}
-        {activeTab === 'results' && <ResultsForm initialMatchId={pendingResultMatchId} />}
+        {activeTab === 'results' && <ResultsForm />}
         {activeTab === 'infractions' && <InfractionsPanel />}
         {activeTab === 'gear' && <GearCheck />}
       </main>

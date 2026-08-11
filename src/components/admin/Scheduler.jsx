@@ -13,16 +13,18 @@ import { calcCalibrationPoints } from '../../utils/scoring'
 import { matchesRef } from '../../firebase/db'
 import ArenaDropZone from './ArenaDropZone'
 import MatchCard from './MatchCard'
+import MatchScoresheet from './MatchScoresheet'
 import styles from './Scheduler.module.css'
 
 const ARENAS = [1, 2, 3]
 
-export default function Scheduler({ onRoundComplete, onSelectActiveMatch }) {
+export default function Scheduler({ onRoundComplete }) {
   const { currentRound, nextRoundNumber } = useRounds()
   const { matches, loading: matchesLoading } = useRoundMatches(currentRound?.id)
   const { fighters, activeFighters, controlBodyEligible, fightersMap } = useFighters()
   const { leaderboard } = useLeaderboard()
   const { statsMap } = useControlStats()
+  const [resultMatchId, setResultMatchId] = useState(null)
 
   function seedRoleStats() {
     const roleStats = {}
@@ -240,14 +242,22 @@ export default function Scheduler({ onRoundComplete, onSelectActiveMatch }) {
                 arena={arena}
                 activeMatch={activeMatchByArena(arena)}
                 fightersMap={fightersMap}
-                onSelect={onSelectActiveMatch}
+                onSelect={setResultMatchId}
                 onDeactivate={handleDeactivate}
               />
             ))}
           </div>
 
-          {/* Grid de asaltos */}
-          {matches.length > 0 && (
+          {/* Grid de asaltos — se reemplaza por la planilla de carga al elegir un asalto */}
+          {resultMatchId ? (
+            <div className={styles.matchColumn}>
+              <MatchScoresheet
+                key={resultMatchId}
+                matchId={resultMatchId}
+                onBack={() => setResultMatchId(null)}
+              />
+            </div>
+          ) : matches.length > 0 && (
             <div className={styles.matchColumn}>
               <h3 className={styles.matchColumnTitle}>Asaltos de la ronda</h3>
               <div className={styles.matchGrid}>
