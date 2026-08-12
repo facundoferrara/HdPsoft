@@ -3,9 +3,11 @@ import styles from './ArenaDropZone.module.css'
 
 /**
  * Zona de drop para una arena. Muestra el asalto activo si lo hay.
- * @param {{ arena: number, activeMatch: object|null, fightersMap: object }} props
+ * `assignable`: hay un asalto pendiente seleccionado por click esperando arena — la zona
+ * vacía se resalta como blanco válido, alternativa al drag&drop.
+ * @param {{ arena: number, activeMatch: object|null, fightersMap: object, assignable: boolean }} props
  */
-export default function ArenaDropZone({ arena, activeMatch, fightersMap, onSelect, onDeactivate }) {
+export default function ArenaDropZone({ arena, activeMatch, fightersMap, onArenaClick, assignable, onDeactivate }) {
   const { setNodeRef, isOver } = useDroppable({ id: String(arena), disabled: !!activeMatch })
 
   const red = activeMatch ? fightersMap[activeMatch.fighter_red_id] : null
@@ -17,8 +19,14 @@ export default function ArenaDropZone({ arena, activeMatch, fightersMap, onSelec
   return (
     <div
       ref={setNodeRef}
-      className={`${styles.zone} ${activeMatch ? styles.occupied : styles.empty} ${isOver ? styles.over : ''} ${activeMatch ? styles.clickable : ''}`}
-      onClick={() => activeMatch && onSelect?.(activeMatch.id)}
+      className={[
+        styles.zone,
+        activeMatch ? styles.occupied : styles.empty,
+        isOver ? styles.over : '',
+        activeMatch ? styles.clickable : '',
+        !activeMatch && assignable ? styles.assignable : '',
+      ].filter(Boolean).join(' ')}
+      onClick={() => onArenaClick?.(arena)}
     >
       <div className={styles.label}>Arena {arena}</div>
       {activeMatch ? (
@@ -42,7 +50,7 @@ export default function ArenaDropZone({ arena, activeMatch, fightersMap, onSelec
         </div>
       ) : (
         <div className={styles.placeholder}>
-          {isOver ? 'Soltar aquí' : 'Libre'}
+          {isOver ? 'Soltar aquí' : assignable ? 'Tocá para asignar' : 'Libre'}
         </div>
       )}
     </div>

@@ -25,6 +25,7 @@ export default function Scheduler({ onRoundComplete }) {
   const { leaderboard } = useLeaderboard()
   const { statsMap } = useControlStats()
   const [resultMatchId, setResultMatchId] = useState(null)
+  const [selectedMatchId, setSelectedMatchId] = useState(null)
 
   function seedRoleStats() {
     const roleStats = {}
@@ -81,6 +82,29 @@ export default function Scheduler({ onRoundComplete }) {
 
   async function handleUpdateWeapon(matchId, weaponName) {
     await updateMatchWeapon(matchId, weaponName)
+  }
+
+  // ── Selección point & click (alternativa al drag&drop) ────────────────────────
+
+  function handleCardClick(match) {
+    if (match.status !== 'pending' || isBlocked(match)) return
+    setSelectedMatchId((prev) => (prev === match.id ? null : match.id))
+  }
+
+  async function handleArenaClick(arena) {
+    const occupant = activeMatchByArena(arena)
+    if (occupant) {
+      // Arena ocupada: si hay un asalto seleccionado esperando, cancelamos esa selección
+      // en vez de asignarlo encima; si no, es el click normal que abre resultados.
+      if (selectedMatchId) setSelectedMatchId(null)
+      else setResultMatchId(occupant.id)
+      return
+    }
+    if (!selectedMatchId) return
+    const match = matches.find((m) => m.id === selectedMatchId)
+    setSelectedMatchId(null)
+    if (!match || match.status !== 'pending' || isBlocked(match)) return
+    await activateMatch(selectedMatchId, arena)
   }
 
   // ── Generación de ronda ────────────────────────────────────────────────────
@@ -246,7 +270,8 @@ export default function Scheduler({ onRoundComplete }) {
                 arena={arena}
                 activeMatch={activeMatchByArena(arena)}
                 fightersMap={fightersMap}
-                onSelect={setResultMatchId}
+                onArenaClick={handleArenaClick}
+                assignable={!!selectedMatchId}
                 onDeactivate={handleDeactivate}
               />
             ))}
@@ -276,6 +301,8 @@ export default function Scheduler({ onRoundComplete }) {
                     onAssignRole={handleAssignRole}
                     onDeactivate={handleDeactivate}
                     onUpdateWeapon={handleUpdateWeapon}
+                    onCardClick={handleCardClick}
+                    isSelected={selectedMatchId === match.id}
                   />
                 ))}
               </div>

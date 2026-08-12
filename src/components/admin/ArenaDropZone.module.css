@@ -75,6 +75,15 @@
 .clickable { cursor: pointer; }
 .clickable:hover { border-color: #4dd0e1; }
 
+.assignable {
+  cursor: pointer;
+  border-style: solid;
+  border-color: #66bb6a;
+  background: #0e1f10;
+}
+.assignable .placeholder { color: #81c784; font-style: normal; font-weight: 600; }
+.assignable:hover { border-color: #81c784; background: #123016; }
+
 .deactivateBtn {
   align-self: flex-end;
   margin-top: 0.15rem;

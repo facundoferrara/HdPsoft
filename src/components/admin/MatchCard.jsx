@@ -7,9 +7,9 @@ const TIER_COLOR = { boffer: '#42a5f5', nylon: '#ab47bc', acero: '#81c784' }
 
 /**
  * Tarjeta de asalto del Scheduler.
- * @param {{ match, fightersMap, isBlocked, onReroll, candidates, onAssignRole, onDeactivate, onUpdateWeapon }} props
+ * @param {{ match, fightersMap, isBlocked, onReroll, candidates, onAssignRole, onDeactivate, onUpdateWeapon, onCardClick, isSelected }} props
  */
-export default function MatchCard({ match, fightersMap, isBlocked, onReroll, candidates = [], onAssignRole, onDeactivate, onUpdateWeapon }) {
+export default function MatchCard({ match, fightersMap, isBlocked, onReroll, candidates = [], onAssignRole, onDeactivate, onUpdateWeapon, onCardClick, isSelected }) {
   const isDraggable = match.status === 'pending' && !isBlocked
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: match.id,
@@ -34,10 +34,17 @@ export default function MatchCard({ match, fightersMap, isBlocked, onReroll, can
     match.status === 'active' ? styles.active :
     isBlocked ? styles.blocked : styles.available,
     isDragging ? styles.dragging : '',
+    isSelected ? styles.selected : '',
   ].join(' ')
 
   return (
-    <div ref={setNodeRef} style={style} className={cardClass} {...(isDraggable ? { ...listeners, ...attributes } : {})}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cardClass}
+      {...(isDraggable ? { ...listeners, ...attributes } : {})}
+      onClick={() => isDraggable && onCardClick?.(match)}
+    >
       <div className={styles.header}>
         <span className={styles.matchNum}>#{match.match_number}</span>
         <span className={styles.tier} style={{ color: TIER_COLOR[match.match_tier] }}>

@@ -18,6 +18,11 @@
 }
 .available:hover { border-color: #555; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
 
+.selected {
+  border-color: #66bb6a;
+  box-shadow: 0 0 0 2px rgba(102,187,106,0.35), 0 2px 12px rgba(0,0,0,0.4);
+}
+
 .blocked {
   background: #1a1200;
   border-color: #4a3800;
