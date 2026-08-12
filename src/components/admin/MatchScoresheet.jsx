@@ -161,11 +161,31 @@ function computeDefenseLoss(blocks, startPts, zoneValues) {
   return { red: Math.min(startPts, red), blue: Math.min(startPts, blue) }
 }
 
-/**
- * Golpes limpios a la cabeza (premio "Golpe limpio a la cabeza"): intercambios donde
- * el golpe principal fue a la cabeza, sin contrapaso, sin doble y sin penalidades.
- * Se computa sobre los records ya armados (misma forma que se guarda en Firestore).
- */
+function countHandHitsLanded(records) {
+  let red = 0, blue = 0
+  for (const r of records) {
+    if (!r.valid) continue
+    if (r.is_double) {
+      if (r.double_blue?.zone === 'hand') red++
+      if (r.double_red?.zone === 'hand') blue++
+    } else if (r.first_hit) {
+      if (r.first_hit.zone === 'hand') {
+        if (r.first_hit.fighter === 'red') red++; else blue++
+      }
+      if (r.contrapaso?.zone === 'hand') {
+        if (r.first_hit.fighter === 'red') blue++; else red++
+      }
+    }
+  }
+  return { red, blue }
+}
+
+function countDoubleHits(records) {
+  let count = 0
+  for (const r of records) { if (r.valid && r.is_double) count++ }
+  return count
+}
+
 function countCleanHeadHits(records) {
   let red = 0, blue = 0
   for (const r of records) {
@@ -187,6 +207,16 @@ function sumContrapasoRescued(records) {
     if (!r.valid || !r.contrapaso || !r.first_hit) continue
     if (r.first_hit.fighter === 'red') blue += r.points_rescued
     else red += r.points_rescued
+  }
+  return { red, blue }
+}
+
+function countContrapasos(records) {
+  let red = 0, blue = 0
+  for (const r of records) {
+    if (!r.valid || !r.contrapaso || !r.first_hit) continue
+    if (r.first_hit.fighter === 'red') blue++
+    else red++
   }
   return { red, blue }
 }
@@ -248,6 +278,9 @@ export default function MatchScoresheet({ matchId, onBack }) {
       const defenseLoss = computeDefenseLoss(blocks, startingPts, zoneValues)
       const cleanHeadHits = countCleanHeadHits(allRecords)
       const contrapasoRescued = sumContrapasoRescued(allRecords)
+      const contrapasoExecs = countContrapasos(allRecords)
+      const handHits = countHandHitsLanded(allRecords)
+      const doubleHits = countDoubleHits(allRecords)
       await completeMatch(matchId, {
         exchanges: allRecords, finalScoreRed: finalRed, finalScoreBlue: finalBlue, winnerId,
         endedEarly: false, endedByDepletion: false,
@@ -255,6 +288,9 @@ export default function MatchScoresheet({ matchId, onBack }) {
         defenseLossRed: defenseLoss.red, defenseLossBlue: defenseLoss.blue,
         cleanHeadHitsRed: cleanHeadHits.red, cleanHeadHitsBlue: cleanHeadHits.blue,
         contrapasoRescuedRed: contrapasoRescued.red, contrapasoRescuedBlue: contrapasoRescued.blue,
+        contrapasoCountRed: contrapasoExecs.red, contrapasoCountBlue: contrapasoExecs.blue,
+        handHitsRed: handHits.red, handHitsBlue: handHits.blue,
+        doubleHitCount: doubleHits,
         weaponName: match.weapon?.name,
       })
       onBack?.()

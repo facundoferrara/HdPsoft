@@ -1,7 +1,6 @@
 import { useLeaderboard } from '../../hooks/useLeaderboard'
 import styles from './Leaderboard.module.css'
 
-/** Top 10 del leaderboard para la vista /display */
 export default function Leaderboard() {
   const { leaderboard, loading } = useLeaderboard(10)
 
@@ -9,14 +8,23 @@ export default function Leaderboard() {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>Clasificación</h2>
+      <h2 className={styles.title}>Clasificación General</h2>
       <ol className={styles.list}>
         {leaderboard.map((entry, i) => (
-          <li key={entry.id} className={styles.row}>
+          <li
+            key={entry.id}
+            className={styles.row}
+            style={{ animationDelay: `${i * 0.1}s` }}
+          >
             <span className={styles.rank}>{i + 1}</span>
-            <span className={styles.name}>{entry.name}</span>
+            <div className={styles.info}>
+              <span className={styles.name}>{entry.name}</span>
+              <span className={styles.wld}>
+                {entry.matches_won ?? 0}W {entry.matches_lost ?? 0}L {entry.matches_drawn ?? 0}D
+              </span>
+            </div>
             <span className={styles.club}>{entry.club}</span>
-            <span className={styles.points}>{entry.total_points.toFixed(2)}</span>
+            <span className={styles.points}>{entry.total_points.toFixed(1)}</span>
           </li>
         ))}
       </ol>
