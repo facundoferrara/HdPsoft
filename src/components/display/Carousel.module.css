@@ -1,0 +1,42 @@
+.carousel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #c8a55a, #6ab7d4);
+  transition: width 0.05s linear;
+  box-shadow: 0 0 8px rgba(200, 165, 90, 0.3);
+}
+
+.slideContainer {
+  flex: 1;
+  overflow: hidden;
+}
+
+.slideIn {
+  animation: fadeSlideIn 0.4s ease-out both;
+}
+
+.slideOut {
+  animation: fadeSlideOut 0.35s ease-in both;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-12px); }
+}

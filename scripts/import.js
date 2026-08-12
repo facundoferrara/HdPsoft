@@ -240,6 +240,12 @@ async function importRoster() {
       clean_head_hits: 0,
       points_rescued_contrapaso: 0,
       wins_espada_larga: 0,
+      matches_won: 0,
+      matches_lost: 0,
+      matches_drawn: 0,
+      hand_hits_landed: 0,
+      double_hit_count: 0,
+      contrapaso_count: 0,
     })
   }
   await lbBatch.commit()

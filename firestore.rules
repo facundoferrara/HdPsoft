@@ -51,7 +51,10 @@ service cloud.firestore {
       // Solo se permite update incremental de campos numéricos
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['total_points', 'matches_complete', 'bye_count', 'points_lost_defense',
-                                 'clean_head_hits', 'points_rescued_contrapaso', 'wins_espada_larga']);
+                                 'clean_head_hits', 'points_rescued_contrapaso', 'contrapaso_count',
+                                 'wins_espada_larga',
+                                 'matches_won', 'matches_lost', 'matches_drawn',
+                                 'hand_hits_landed', 'double_hit_count']);
     }
 
     // ── Byes ─────────────────────────────────────────────────────────────────

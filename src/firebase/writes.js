@@ -91,7 +91,7 @@ function espadaLargaWin(winnerId, fighterId, weaponName) {
  * de espada larga).
  *
  * @param {string} matchId
- * @param {{ exchanges, finalScoreRed, finalScoreBlue, winnerId, endedEarly, endedByDepletion, fighterRedId, fighterBlueId, defenseLossRed, defenseLossBlue, cleanHeadHitsRed, cleanHeadHitsBlue, contrapasoRescuedRed, contrapasoRescuedBlue, weaponName }} data
+ * @param {{ exchanges, finalScoreRed, finalScoreBlue, winnerId, endedEarly, endedByDepletion, fighterRedId, fighterBlueId, defenseLossRed, defenseLossBlue, cleanHeadHitsRed, cleanHeadHitsBlue, contrapasoRescuedRed, contrapasoRescuedBlue, handHitsRed, handHitsBlue, doubleHitCount, weaponName }} data
  */
 export async function completeMatch(matchId, {
   exchanges,
@@ -108,6 +108,11 @@ export async function completeMatch(matchId, {
   cleanHeadHitsBlue,
   contrapasoRescuedRed,
   contrapasoRescuedBlue,
+  contrapasoCountRed,
+  contrapasoCountBlue,
+  handHitsRed,
+  handHitsBlue,
+  doubleHitCount,
   weaponName,
 }) {
   // Batch: match + leaderboard (atomico)
@@ -122,21 +127,32 @@ export async function completeMatch(matchId, {
     ended_by_depletion: endedByDepletion,
   })
 
+  const wldRed = winnerId === fighterRedId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
+  const wldBlue = winnerId === fighterBlueId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
+
   batch.update(doc(db, 'leaderboard', fighterRedId), {
     total_points: increment(Math.round(finalScoreRed * 100) / 100),
     matches_complete: increment(1),
+    [wldRed]: increment(1),
     points_lost_defense: increment(defenseLossRed ?? 0),
     clean_head_hits: increment(cleanHeadHitsRed ?? 0),
     points_rescued_contrapaso: increment(contrapasoRescuedRed ?? 0),
+    contrapaso_count: increment(contrapasoCountRed ?? 0),
+    hand_hits_landed: increment(handHitsRed ?? 0),
+    double_hit_count: increment(doubleHitCount ?? 0),
     wins_espada_larga: increment(espadaLargaWin(winnerId, fighterRedId, weaponName)),
   })
 
   batch.update(doc(db, 'leaderboard', fighterBlueId), {
     total_points: increment(Math.round(finalScoreBlue * 100) / 100),
     matches_complete: increment(1),
+    [wldBlue]: increment(1),
     points_lost_defense: increment(defenseLossBlue ?? 0),
     clean_head_hits: increment(cleanHeadHitsBlue ?? 0),
     points_rescued_contrapaso: increment(contrapasoRescuedBlue ?? 0),
+    contrapaso_count: increment(contrapasoCountBlue ?? 0),
+    hand_hits_landed: increment(handHitsBlue ?? 0),
+    double_hit_count: increment(doubleHitCount ?? 0),
     wins_espada_larga: increment(espadaLargaWin(winnerId, fighterBlueId, weaponName)),
   })
 
@@ -182,15 +198,20 @@ export async function overrideMatch(matchId, {
     overridden_at: serverTimestamp(),
   })
 
+  const wldRed = winnerId === fighterRedId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
+  const wldBlue = winnerId === fighterBlueId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
+
   batch.update(doc(db, 'leaderboard', fighterRedId), {
     total_points: increment(Math.round(finalScoreRed * 100) / 100),
     matches_complete: increment(1),
+    [wldRed]: increment(1),
     wins_espada_larga: increment(espadaLargaWin(winnerId, fighterRedId, weaponName)),
   })
 
   batch.update(doc(db, 'leaderboard', fighterBlueId), {
     total_points: increment(Math.round(finalScoreBlue * 100) / 100),
     matches_complete: increment(1),
+    [wldBlue]: increment(1),
     wins_espada_larga: increment(espadaLargaWin(winnerId, fighterBlueId, weaponName)),
   })
 
