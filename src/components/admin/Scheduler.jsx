@@ -8,7 +8,7 @@ import { useLeaderboard } from '../../hooks/useLeaderboard'
 import { useControlStats } from '../../hooks/useControlStats'
 import { generatePairings, pairKey } from '../../utils/pairing'
 import { assignControlBody, getCandidatesForReroll } from '../../utils/controlBody'
-import { generateRound, activateMatch, deactivateMatch, updateMatchControlBody, registerBye, cancelRound } from '../../firebase/writes'
+import { generateRound, activateMatch, deactivateMatch, updateMatchWeapon, updateMatchControlBody, registerBye, cancelRound } from '../../firebase/writes'
 import { calcCalibrationPoints } from '../../utils/scoring'
 import { matchesRef } from '../../firebase/db'
 import ArenaDropZone from './ArenaDropZone'
@@ -77,6 +77,10 @@ export default function Scheduler({ onRoundComplete }) {
 
   async function handleDeactivate(matchId) {
     await deactivateMatch(matchId)
+  }
+
+  async function handleUpdateWeapon(matchId, weaponName) {
+    await updateMatchWeapon(matchId, weaponName)
   }
 
   // ── Generación de ronda ────────────────────────────────────────────────────
@@ -271,6 +275,7 @@ export default function Scheduler({ onRoundComplete }) {
                     candidates={getEligibleForMatch(match)}
                     onAssignRole={handleAssignRole}
                     onDeactivate={handleDeactivate}
+                    onUpdateWeapon={handleUpdateWeapon}
                   />
                 ))}
               </div>

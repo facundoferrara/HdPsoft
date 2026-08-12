@@ -50,7 +50,8 @@ service cloud.firestore {
       allow create, delete: if true;
       // Solo se permite update incremental de campos numéricos
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
-                       .hasOnly(['total_points', 'matches_complete', 'bye_count', 'points_lost_defense']);
+                       .hasOnly(['total_points', 'matches_complete', 'bye_count', 'points_lost_defense',
+                                 'clean_head_hits', 'points_rescued_contrapaso', 'wins_espada_larga']);
     }
 
     // ── Byes ─────────────────────────────────────────────────────────────────
@@ -98,6 +99,8 @@ service cloud.firestore {
       let controlBodyKeys = ['referee_id', 'judge_1_id', 'judge_2_id',
                               'same_club_warning', 'fairness_warning', 'role_mismatch_warning',
                               'rerolled'].toSet();
+      // Arma acordada del asalto
+      let weaponKeys = ['weapon'].toSet();
       // Si se está marcando override, exigir nota editorial no vacía
       let overrideOk = !changed.hasAny(['override'])
           || newData.override != true
@@ -106,7 +109,8 @@ service cloud.firestore {
              changed.hasOnly(activationKeys)
           || changed.hasOnly(completionKeys)
           || changed.hasOnly(cancellationKeys)
-          || changed.hasOnly(controlBodyKeys));
+          || changed.hasOnly(controlBodyKeys)
+          || changed.hasOnly(weaponKeys));
     }
 
     function isValidExchange(data) {

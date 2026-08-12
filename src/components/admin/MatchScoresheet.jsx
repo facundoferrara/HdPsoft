@@ -161,6 +161,36 @@ function computeDefenseLoss(blocks, startPts, zoneValues) {
   return { red: Math.min(startPts, red), blue: Math.min(startPts, blue) }
 }
 
+/**
+ * Golpes limpios a la cabeza (premio "Golpe limpio a la cabeza"): intercambios donde
+ * el golpe principal fue a la cabeza, sin contrapaso, sin doble y sin penalidades.
+ * Se computa sobre los records ya armados (misma forma que se guarda en Firestore).
+ */
+function countCleanHeadHits(records) {
+  let red = 0, blue = 0
+  for (const r of records) {
+    if (!r.valid || r.is_double || r.contrapaso || r.penalties.length > 0) continue
+    if (r.first_hit?.zone !== 'head') continue
+    if (r.first_hit.fighter === 'red') red++
+    else blue++
+  }
+  return { red, blue }
+}
+
+/**
+ * Puntos rescatados por contrapaso (premio "Más puntos rescatados"): se le acreditan
+ * a quien EJECUTA el contrapaso — la víctima del golpe principal, no el atacante.
+ */
+function sumContrapasoRescued(records) {
+  let red = 0, blue = 0
+  for (const r of records) {
+    if (!r.valid || !r.contrapaso || !r.first_hit) continue
+    if (r.first_hit.fighter === 'red') blue += r.points_rescued
+    else red += r.points_rescued
+  }
+  return { red, blue }
+}
+
 // Component — planilla de un asalto puntual. `onBack` vuelve a la vista anterior
 // (picker de ResultsForm, o grilla de asaltos de Scheduler, según quién la use).
 export default function MatchScoresheet({ matchId, onBack }) {
@@ -216,11 +246,16 @@ export default function MatchScoresheet({ matchId, onBack }) {
       if (finalRed  > finalBlue) winnerId = match.fighter_red_id
       if (finalBlue > finalRed)  winnerId = match.fighter_blue_id
       const defenseLoss = computeDefenseLoss(blocks, startingPts, zoneValues)
+      const cleanHeadHits = countCleanHeadHits(allRecords)
+      const contrapasoRescued = sumContrapasoRescued(allRecords)
       await completeMatch(matchId, {
         exchanges: allRecords, finalScoreRed: finalRed, finalScoreBlue: finalBlue, winnerId,
         endedEarly: false, endedByDepletion: false,
         fighterRedId: match.fighter_red_id, fighterBlueId: match.fighter_blue_id,
         defenseLossRed: defenseLoss.red, defenseLossBlue: defenseLoss.blue,
+        cleanHeadHitsRed: cleanHeadHits.red, cleanHeadHitsBlue: cleanHeadHits.blue,
+        contrapasoRescuedRed: contrapasoRescued.red, contrapasoRescuedBlue: contrapasoRescued.blue,
+        weaponName: match.weapon?.name,
       })
       onBack?.()
     } finally { setSaving(false) }
@@ -236,6 +271,7 @@ export default function MatchScoresheet({ matchId, onBack }) {
       await overrideMatch(matchId, {
         finalScoreRed: finalRed, finalScoreBlue: finalBlue, winnerId, overrideNote: note,
         fighterRedId: match.fighter_red_id, fighterBlueId: match.fighter_blue_id,
+        weaponName: match.weapon?.name,
       })
       onBack?.()
     } finally { setSaving(false) }

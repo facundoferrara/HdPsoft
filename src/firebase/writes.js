@@ -30,6 +30,11 @@ export async function deactivateMatch(matchId) {
   await updateDoc(doc(db, 'matches', matchId), { status: 'pending', arena: null })
 }
 
+/** Actualiza el arma acordada de un asalto (Ari la acuerda verbalmente con el par). */
+export async function updateMatchWeapon(matchId, weaponName) {
+  await updateDoc(doc(db, 'matches', matchId), { weapon: { name: weaponName } })
+}
+
 // ── Reroll de cuerpo de control ───────────────────────────────────────────────
 
 /**
@@ -71,16 +76,22 @@ export async function updateMatchControlBody(matchId, next, prevControlBody = nu
 
 // ── Cierre de asalto ──────────────────────────────────────────────────────────
 
+/** Premio "Más victorias con espada larga" — pedido de sponsor, arma exacta (no "a dos manos" en general). */
+function espadaLargaWin(winnerId, fighterId, weaponName) {
+  return winnerId === fighterId && weaponName === 'espada larga' ? 1 : 0
+}
+
 /**
  * Cierra un asalto: escribe exchanges, actualiza match y leaderboard en batch.
  *
- * `defenseLossRed`/`defenseLossBlue` ya vienen calculados por el caller (MatchScoresheet,
- * que tiene los `blocks` y `zoneValues` a mano) — puntos crudos recibidos por cada tirador
- * para el premio a la Defensa, sin descontar lo que el contrapaso rescata en el marcador
- * real, tope `starting_points` por asalto. Ver `computeDefenseLoss` en MatchScoresheet.jsx.
+ * `defenseLossRed`/`defenseLossBlue`, `cleanHeadHitsRed`/`Blue`, `contrapasoRescuedRed`/`Blue`
+ * ya vienen calculados por el caller (MatchScoresheet, que tiene `blocks`/`zoneValues`/los
+ * records armados a mano) — ver `computeDefenseLoss`, `countCleanHeadHits` y
+ * `sumContrapasoRescued` ahí. `weaponName` es el arma acordada del asalto (para el premio
+ * de espada larga).
  *
  * @param {string} matchId
- * @param {{ exchanges, finalScoreRed, finalScoreBlue, winnerId, endedEarly, endedByDepletion, fighterRedId, fighterBlueId, defenseLossRed, defenseLossBlue }} data
+ * @param {{ exchanges, finalScoreRed, finalScoreBlue, winnerId, endedEarly, endedByDepletion, fighterRedId, fighterBlueId, defenseLossRed, defenseLossBlue, cleanHeadHitsRed, cleanHeadHitsBlue, contrapasoRescuedRed, contrapasoRescuedBlue, weaponName }} data
  */
 export async function completeMatch(matchId, {
   exchanges,
@@ -93,6 +104,11 @@ export async function completeMatch(matchId, {
   fighterBlueId,
   defenseLossRed,
   defenseLossBlue,
+  cleanHeadHitsRed,
+  cleanHeadHitsBlue,
+  contrapasoRescuedRed,
+  contrapasoRescuedBlue,
+  weaponName,
 }) {
   // Batch: match + leaderboard (atomico)
   const batch = writeBatch(db)
@@ -110,12 +126,18 @@ export async function completeMatch(matchId, {
     total_points: increment(Math.round(finalScoreRed * 100) / 100),
     matches_complete: increment(1),
     points_lost_defense: increment(defenseLossRed ?? 0),
+    clean_head_hits: increment(cleanHeadHitsRed ?? 0),
+    points_rescued_contrapaso: increment(contrapasoRescuedRed ?? 0),
+    wins_espada_larga: increment(espadaLargaWin(winnerId, fighterRedId, weaponName)),
   })
 
   batch.update(doc(db, 'leaderboard', fighterBlueId), {
     total_points: increment(Math.round(finalScoreBlue * 100) / 100),
     matches_complete: increment(1),
     points_lost_defense: increment(defenseLossBlue ?? 0),
+    clean_head_hits: increment(cleanHeadHitsBlue ?? 0),
+    points_rescued_contrapaso: increment(contrapasoRescuedBlue ?? 0),
+    wins_espada_larga: increment(espadaLargaWin(winnerId, fighterBlueId, weaponName)),
   })
 
   await batch.commit()
@@ -130,11 +152,12 @@ export async function completeMatch(matchId, {
 /**
  * Cierra un asalto por override de mesa: puntaje final tipeado a mano + nota editorial.
  * No escribe exchanges — no hay datos reales de intercambio que registrar en una corrección.
- * Por eso tampoco toca `points_lost_defense`: sin detalle de intercambios no hay forma de
- * saber cuánto de la diferencia final fue por contrapaso (que no cuenta para ese premio).
+ * Por eso tampoco toca `points_lost_defense`/`clean_head_hits`/`points_rescued_contrapaso`:
+ * sin detalle de intercambios no hay forma de calcularlos. `wins_espada_larga` sí se
+ * actualiza — solo depende de `winner_id` y el arma del asalto, ambos ya conocidos.
  *
  * @param {string} matchId
- * @param {{ finalScoreRed, finalScoreBlue, winnerId, overrideNote, fighterRedId, fighterBlueId }} data
+ * @param {{ finalScoreRed, finalScoreBlue, winnerId, overrideNote, fighterRedId, fighterBlueId, weaponName }} data
  */
 export async function overrideMatch(matchId, {
   finalScoreRed,
@@ -143,6 +166,7 @@ export async function overrideMatch(matchId, {
   overrideNote,
   fighterRedId,
   fighterBlueId,
+  weaponName,
 }) {
   const batch = writeBatch(db)
 
@@ -161,11 +185,13 @@ export async function overrideMatch(matchId, {
   batch.update(doc(db, 'leaderboard', fighterRedId), {
     total_points: increment(Math.round(finalScoreRed * 100) / 100),
     matches_complete: increment(1),
+    wins_espada_larga: increment(espadaLargaWin(winnerId, fighterRedId, weaponName)),
   })
 
   batch.update(doc(db, 'leaderboard', fighterBlueId), {
     total_points: increment(Math.round(finalScoreBlue * 100) / 100),
     matches_complete: increment(1),
+    wins_espada_larga: increment(espadaLargaWin(winnerId, fighterBlueId, weaponName)),
   })
 
   await batch.commit()

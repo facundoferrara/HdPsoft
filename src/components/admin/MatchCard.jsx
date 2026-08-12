@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
 import styles from './MatchCard.module.css'
@@ -7,9 +7,9 @@ const TIER_COLOR = { boffer: '#42a5f5', nylon: '#ab47bc', acero: '#81c784' }
 
 /**
  * Tarjeta de asalto del Scheduler.
- * @param {{ match, fightersMap, isBlocked, onReroll, candidates, onAssignRole, onDeactivate }} props
+ * @param {{ match, fightersMap, isBlocked, onReroll, candidates, onAssignRole, onDeactivate, onUpdateWeapon }} props
  */
-export default function MatchCard({ match, fightersMap, isBlocked, onReroll, candidates = [], onAssignRole, onDeactivate }) {
+export default function MatchCard({ match, fightersMap, isBlocked, onReroll, candidates = [], onAssignRole, onDeactivate, onUpdateWeapon }) {
   const isDraggable = match.status === 'pending' && !isBlocked
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: match.id,
@@ -43,6 +43,7 @@ export default function MatchCard({ match, fightersMap, isBlocked, onReroll, can
         <span className={styles.tier} style={{ color: TIER_COLOR[match.match_tier] }}>
           {match.match_tier?.toUpperCase()}
         </span>
+        <WeaponInput match={match} onUpdate={onUpdateWeapon} />
         {match.same_club_warning && <span className={styles.sameClub}>⚠ mismo club</span>}
         {match.fairness_warning && <span className={styles.fairnessWarning}>⚠ desbalance árbitro</span>}
         {match.role_mismatch_warning && <span className={styles.roleMismatch}>⚠ sin preferencia</span>}
@@ -113,6 +114,34 @@ export default function MatchCard({ match, fightersMap, isBlocked, onReroll, can
         </button>
       )}
     </div>
+  )
+}
+
+/** Arma acordada del asalto — editable mientras no esté cerrado. */
+function WeaponInput({ match, onUpdate }) {
+  const [value, setValue] = useState(match.weapon?.name ?? '')
+  const editable = ['pending', 'active'].includes(match.status) && !!onUpdate
+
+  useEffect(() => { setValue(match.weapon?.name ?? '') }, [match.weapon?.name])
+
+  if (!editable) return <span className={styles.weaponLabel}>{match.weapon?.name ?? '—'}</span>
+
+  function commit() {
+    const trimmed = value.trim()
+    if (trimmed && trimmed !== match.weapon?.name) onUpdate(match.id, trimmed)
+    else setValue(match.weapon?.name ?? '')
+  }
+
+  return (
+    <input
+      className={styles.weaponInput}
+      value={value}
+      title="Arma acordada del asalto"
+      onClick={(e) => e.stopPropagation()}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+    />
   )
 }
 
