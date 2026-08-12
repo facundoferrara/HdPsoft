@@ -127,6 +127,7 @@ async function seed() {
       rounds_played: 0,
       matches_complete: 0,
       bye_count: 0,
+      points_lost_defense: 0,
     })
   }
   await lbBatch.commit()

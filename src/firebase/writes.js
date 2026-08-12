@@ -74,8 +74,13 @@ export async function updateMatchControlBody(matchId, next, prevControlBody = nu
 /**
  * Cierra un asalto: escribe exchanges, actualiza match y leaderboard en batch.
  *
+ * `defenseLossRed`/`defenseLossBlue` ya vienen calculados por el caller (MatchScoresheet,
+ * que tiene los `blocks` y `zoneValues` a mano) — puntos crudos recibidos por cada tirador
+ * para el premio a la Defensa, sin descontar lo que el contrapaso rescata en el marcador
+ * real, tope `starting_points` por asalto. Ver `computeDefenseLoss` en MatchScoresheet.jsx.
+ *
  * @param {string} matchId
- * @param {{ exchanges, finalScoreRed, finalScoreBlue, winnerId, endedEarly, endedByDepletion, fighterRedId, fighterBlueId }} data
+ * @param {{ exchanges, finalScoreRed, finalScoreBlue, winnerId, endedEarly, endedByDepletion, fighterRedId, fighterBlueId, defenseLossRed, defenseLossBlue }} data
  */
 export async function completeMatch(matchId, {
   exchanges,
@@ -86,6 +91,8 @@ export async function completeMatch(matchId, {
   endedByDepletion,
   fighterRedId,
   fighterBlueId,
+  defenseLossRed,
+  defenseLossBlue,
 }) {
   // Batch: match + leaderboard (atomico)
   const batch = writeBatch(db)
@@ -102,11 +109,13 @@ export async function completeMatch(matchId, {
   batch.update(doc(db, 'leaderboard', fighterRedId), {
     total_points: increment(Math.round(finalScoreRed * 100) / 100),
     matches_complete: increment(1),
+    points_lost_defense: increment(defenseLossRed ?? 0),
   })
 
   batch.update(doc(db, 'leaderboard', fighterBlueId), {
     total_points: increment(Math.round(finalScoreBlue * 100) / 100),
     matches_complete: increment(1),
+    points_lost_defense: increment(defenseLossBlue ?? 0),
   })
 
   await batch.commit()
@@ -121,6 +130,8 @@ export async function completeMatch(matchId, {
 /**
  * Cierra un asalto por override de mesa: puntaje final tipeado a mano + nota editorial.
  * No escribe exchanges — no hay datos reales de intercambio que registrar en una corrección.
+ * Por eso tampoco toca `points_lost_defense`: sin detalle de intercambios no hay forma de
+ * saber cuánto de la diferencia final fue por contrapaso (que no cuenta para ese premio).
  *
  * @param {string} matchId
  * @param {{ finalScoreRed, finalScoreBlue, winnerId, overrideNote, fighterRedId, fighterBlueId }} data

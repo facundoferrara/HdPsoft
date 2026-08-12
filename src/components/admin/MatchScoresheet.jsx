@@ -121,6 +121,46 @@ function blockToRecords(block, startNum, scoreRed, scoreBlue, zoneValues) {
   return { records, nextNum: n }
 }
 
+/**
+ * Puntos "perdidos para Defensa": mide la capacidad de un tirador de no vulnerar sus
+ * puntos iniciales — es un ledger separado del marcador real. Cada golpe recibido resta
+ * su valor de zona CRUDO (sin descontar lo que un contrapaso rescata en el marcador real:
+ * si te pegan en la cabeza (3) y contrapaseás a la mano (1), en el marcador real bajás 2,
+ * pero para Defensa igual "recibiste" el golpe de cabeza completo). Doble y presa mutua
+ * también restan (no tienen mecanismo de rescate). Tope: no se puede perder más de
+ * `startPts` por asalto. Un intercambio anulado por amarilla (ver computeBlockDelta) no
+ * resta nada — no hubo golpe real.
+ */
+function computeDefenseLoss(blocks, startPts, zoneValues) {
+  let red = 0, blue = 0
+  for (const block of blocks) {
+    if (!isBlockComplete(block)) continue
+    const bothYellow = block.penRed === 'yellow' && block.penBlue === 'yellow'
+    const attacker = block.isDouble === false ? block.hitFirst : null
+    const nullified = bothYellow ||
+      (block.penRed === 'yellow' && attacker === 'red') ||
+      (block.penBlue === 'yellow' && attacker === 'blue')
+    if (nullified) continue
+
+    if (block.isDouble === 'presa') {
+      red += 2; blue += 2
+    } else if (block.isDouble === true) {
+      if (block.doubleRedZone)  red  += zoneValues[block.doubleRedZone]
+      if (block.doubleBlueZone) blue += zoneValues[block.doubleBlueZone]
+    } else if (block.isDouble === false && block.hitFirst) {
+      const victimRaw = zoneValues[block.hitZone]
+      if (block.hitFirst === 'red') blue += victimRaw
+      else red += victimRaw
+      if (block.alsoHit && block.contrapasoZone) {
+        const attackerRaw = zoneValues[block.contrapasoZone]
+        if (block.hitFirst === 'red') red += attackerRaw
+        else blue += attackerRaw
+      }
+    }
+  }
+  return { red: Math.min(startPts, red), blue: Math.min(startPts, blue) }
+}
+
 // Component — planilla de un asalto puntual. `onBack` vuelve a la vista anterior
 // (picker de ResultsForm, o grilla de asaltos de Scheduler, según quién la use).
 export default function MatchScoresheet({ matchId, onBack }) {
@@ -175,10 +215,12 @@ export default function MatchScoresheet({ matchId, onBack }) {
       let winnerId = 'draw'
       if (finalRed  > finalBlue) winnerId = match.fighter_red_id
       if (finalBlue > finalRed)  winnerId = match.fighter_blue_id
+      const defenseLoss = computeDefenseLoss(blocks, startingPts, zoneValues)
       await completeMatch(matchId, {
         exchanges: allRecords, finalScoreRed: finalRed, finalScoreBlue: finalBlue, winnerId,
         endedEarly: false, endedByDepletion: false,
         fighterRedId: match.fighter_red_id, fighterBlueId: match.fighter_blue_id,
+        defenseLossRed: defenseLoss.red, defenseLossBlue: defenseLoss.blue,
       })
       onBack?.()
     } finally { setSaving(false) }

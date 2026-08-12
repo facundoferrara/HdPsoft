@@ -50,7 +50,7 @@ service cloud.firestore {
       allow create, delete: if true;
       // Solo se permite update incremental de campos numéricos
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
-                       .hasOnly(['total_points', 'matches_complete', 'bye_count']);
+                       .hasOnly(['total_points', 'matches_complete', 'bye_count', 'points_lost_defense']);
     }
 
     // ── Byes ─────────────────────────────────────────────────────────────────
