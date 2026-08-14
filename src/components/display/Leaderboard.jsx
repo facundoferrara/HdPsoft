@@ -20,7 +20,7 @@ export default function Leaderboard() {
             <div className={styles.info}>
               <span className={styles.name}>{entry.name}</span>
               <span className={styles.wld}>
-                {entry.matches_won ?? 0}W {entry.matches_lost ?? 0}L {entry.matches_drawn ?? 0}D
+                {entry.matches_won ?? 0}W {entry.matches_lost ?? 0}L {entry.matches_drawn ?? 0}D{(entry.bye_count ?? 0) > 0 ? ` ${entry.bye_count}C` : ''}
               </span>
             </div>
             <span className={styles.club}>{entry.club}</span>

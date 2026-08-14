@@ -46,7 +46,7 @@ const db = getFirestore(app)
 // -- Datos de prueba ----------------------------------------------------------
 
 const SCORING_CONFIG = {
-  zone_values: { hand: 1, body: 2, head: 3, presa: 3 },
+  zone_values: { hand: 1, body: 2, head: 3, presa: 3, presa_mutua: 2 },
   starting_points: 5,
   exchanges_to_win: 3,
   self_disarm_base: 3,
@@ -58,42 +58,78 @@ const EVENT_CONFIG = {
   target_end_time: '18:00',
 }
 
-const FIGHTERS = [
-  { name: 'Rodrigo Vidal',   club: 'CDS', tier: 'acero',  role: 'referee' },
-  { name: 'Camila Torres',   club: 'CDS', tier: 'nylon',  role: 'judge' },
-  { name: 'Matías Peralta',  club: 'CDS', tier: 'acero',  role: 'both' },
-  { name: 'Valentina Ruiz',  club: 'CDS', tier: 'boffer', role: 'judge' },
-  { name: 'Lucas Herrera',   club: 'CDS', tier: 'nylon',  role: 'referee' },
-  { name: 'Ignacio Blanco',  club: 'EdN', tier: 'acero',  role: 'both' },
-  { name: 'Sofía Mendez',    club: 'EdN', tier: 'nylon',  role: 'judge' },
-  { name: 'Tomás Ríos',      club: 'EdN', tier: 'boffer', role: 'judge' },
-  { name: 'Ana Gutiérrez',   club: 'EdN', tier: 'acero',  role: 'referee' },
-  { name: 'Felipe Castro',   club: 'EdN', tier: 'nylon',  role: 'both' },
-  { name: 'Carolina Mora',   club: 'SOe', tier: 'acero',  role: 'referee' },
-  { name: 'Diego Salinas',   club: 'SOe', tier: 'boffer', role: 'judge' },
-  { name: 'Paola Jiménez',   club: 'SOe', tier: 'nylon',  role: 'both' },
-  { name: 'Andrés Vargas',   club: 'SOe', tier: 'acero',  role: 'referee' },
-  { name: 'Natalia Fuentes', club: 'SOe', tier: 'nylon',  role: 'judge' },
-  { name: 'Gabriel Rojas',   club: 'EsL', tier: 'acero',  role: 'both' },
-  { name: 'Daniela Soto',    club: 'EsL', tier: 'boffer', role: 'judge' },
-  { name: 'Pablo Núñez',     club: 'EsL', tier: 'nylon',  role: 'referee' },
-  { name: 'Fernanda Ortega', club: 'EsL', tier: 'acero',  role: 'both' },
-  { name: 'Marco Ibáñez',    club: 'Ind', tier: 'nylon',  role: 'judge' },
-  { name: 'Laura Espinoza',  club: 'Ind', tier: 'acero',  role: 'referee' },
-  { name: 'Cristián Pino',   club: 'Ind', tier: 'boffer', role: 'judge' },
-  { name: 'Javiera Leal',    club: 'Ind', tier: 'nylon',  role: 'both' },
-  { name: 'Sebastián Mora',  club: 'Ind', tier: 'acero',  role: 'referee' },
+const FIGHTERS_RAW = [
+  { name: 'Leonor Natalini',             club: 'Cruz del Sur',     tier: 'nylon',  role: 'judge' },
+  { name: 'Andrés Eylenstein',           club: 'Cruz del Sur',     tier: 'acero',  role: 'both' },
+  { name: 'Tomás Ezequiel Celedón',      club: 'Cruz del Sur',     tier: 'acero',  role: 'referee' },
+  { name: 'Marcos Ayala Lao',            club: 'Cruz del Sur',     tier: 'nylon',  role: 'both' },
+  { name: 'Facundo Ferrara',             club: 'Cruz del Sur',     tier: 'acero',  role: 'both' },
+  { name: 'Cristian Adrián Yaniz',       club: 'Cruz del Sur',     tier: 'acero',  role: 'referee' },
+  { name: 'Lautaro Antonio',             club: 'Cruz del Sur',     tier: 'boffer', role: 'judge' },
+  { name: 'Thiago Soria',                club: 'Cruz del Sur',     tier: 'boffer', role: 'judge' },
+  { name: 'Teo Campoy',                  club: 'Cruz del Sur',     tier: 'nylon',  role: 'both' },
+  { name: 'Juan Pedro Vilardebó',        club: 'Cruz del Sur',     tier: 'boffer', role: 'none' },
+  { name: 'Raiquen Rodríguez',           club: 'FadW',             tier: 'acero',  role: 'both' },
+  { name: 'Facundo Emiliano Pepe Schell', club: 'FadW',            tier: 'nylon',  role: 'judge' },
+  { name: 'Néstor Torres',               club: 'FadW',             tier: 'acero',  role: 'referee' },
+  { name: 'Fabian Vilariño',             club: 'FadW',             tier: 'nylon',  role: 'both' },
+  { name: 'Roberto Taschuk',             club: 'FadW',             tier: 'acero',  role: 'both' },
+  { name: 'Santiago Martinez',           club: 'FadW',             tier: 'boffer', role: 'none' },
+  { name: 'Enrique Sueiro',              club: 'FadW',             tier: 'nylon',  role: 'referee' },
+  { name: 'Sebastián Ferrara',           club: 'Sol del Norte',    tier: 'acero',  role: 'both' },
+  { name: 'Gerónimo Hernán Videla Toteda', club: 'Vincere',        tier: 'acero',  role: 'referee' },
+  { name: 'Julieta Virginia Ramos',      club: 'Vincere',          tier: 'nylon',  role: 'judge' },
+  { name: 'Martín Bianchi',              club: 'Vincere',          tier: 'acero',  role: 'both' },
+  { name: 'Martin Stead',                club: 'Vincere',          tier: 'nylon',  role: 'referee' },
+  { name: 'Gonzalo Fernandez',           club: 'Vincere',          tier: 'acero',  role: 'both' },
+  { name: 'Nicolas Ramos',               club: 'Vincere',          tier: 'boffer', role: 'judge' },
+  { name: 'Juan Cruz Rodríguez',         club: 'Vincere',          tier: 'nylon',  role: 'judge' },
+  { name: 'Cristian Scotti',             club: 'Vincere',          tier: 'acero',  role: 'referee' },
+  { name: 'Joaquín Bentancur Flores',    club: 'SMCD',             tier: 'nylon',  role: 'both' },
+  { name: 'Joaquin Wohler',              club: 'SMCD',             tier: 'boffer', role: 'judge' },
+  { name: 'Hector Balbuzano',            club: 'Duelist Academy',  tier: 'acero',  role: 'referee' },
+  { name: 'Katia Ramos',                 club: 'Duelist Academy',  tier: 'nylon',  role: 'both' },
+  { name: 'Ariel García',                club: 'Independiente',    tier: 'acero',  role: 'referee' },
 ]
 
+function shortName(full) {
+  const parts = full.trim().split(/\s+/)
+  if (parts.length <= 2) return full
+  return `${parts[0]} ${parts[parts.length - 1]}`
+}
+
+const FIGHTERS = FIGHTERS_RAW.map((f) => ({ ...f, name: shortName(f.name) }))
+
 // -- Escritura ----------------------------------------------------------------
+
+async function batchDelete(docs) {
+  for (let i = 0; i < docs.length; i += 500) {
+    const batch = writeBatch(db)
+    docs.slice(i, i + 500).forEach((d) => batch.delete(d.ref))
+    await batch.commit()
+  }
+  return docs.length
+}
 
 async function clearCollection(colName) {
   const snap = await getDocs(collection(db, colName))
   if (snap.empty) return 0
-  const batch = writeBatch(db)
-  snap.docs.forEach((d) => batch.delete(d.ref))
-  await batch.commit()
-  return snap.size
+  return batchDelete(snap.docs)
+}
+
+async function clearMatchesWithExchanges() {
+  const matchesSnap = await getDocs(collection(db, 'matches'))
+  if (matchesSnap.empty) return 0
+  let exchCount = 0
+  for (const matchDoc of matchesSnap.docs) {
+    const exchSnap = await getDocs(collection(db, 'matches', matchDoc.id, 'exchanges'))
+    if (!exchSnap.empty) {
+      await batchDelete(exchSnap.docs)
+      exchCount += exchSnap.size
+    }
+  }
+  await batchDelete(matchesSnap.docs)
+  return { matches: matchesSnap.size, exchanges: exchCount }
 }
 
 async function seed() {
@@ -105,10 +141,21 @@ async function seed() {
   await setDoc(doc(db, 'config', 'event'), EVENT_CONFIG)
   console.log('  config/event ok')
 
+  await setDoc(doc(db, 'config', 'weapons'), { custom: [] })
+  console.log('  config/weapons ok')
+
   const deletedF = await clearCollection('fighters')
   const deletedL = await clearCollection('leaderboard')
   if (deletedF) console.log(`  ${deletedF} fighters anteriores eliminados`)
   if (deletedL) console.log(`  ${deletedL} entradas de leaderboard eliminadas`)
+
+  const { matches: mDel, exchanges: eDel } = await clearMatchesWithExchanges()
+  if (mDel) console.log(`  ${mDel} matches eliminados (${eDel} exchanges)`)
+
+  for (const col of ['rounds', 'byes', 'control_stats']) {
+    const deleted = await clearCollection(col)
+    if (deleted) console.log(`  ${deleted} ${col} eliminados`)
+  }
 
   const fighterRefs = []
   for (const f of FIGHTERS) {
@@ -136,7 +183,9 @@ async function seed() {
       matches_drawn: 0,
       hand_hits_landed: 0,
       double_hit_count: 0,
-      contrapaso_count: 0,
+      contrapaso_count: 0, clean_hand_hits: 0, clean_body_hits: 0,
+      clean_exchanges_won: 0,
+      total_valid_exchanges: 0,
     })
   }
   await lbBatch.commit()

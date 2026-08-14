@@ -18,9 +18,8 @@ export function useFighters() {
     return unsub
   }, [])
 
-  const activeFighters = fighters.filter((f) => !['tbd', 'na'].includes(f.tier))
-  // Elegibles para cuerpo de control: cualquiera presente (incl. staff 'na'), salvo 'tbd' (aún no acreditado)
-  const controlBodyEligible = fighters.filter((f) => f.tier !== 'tbd')
+  const activeFighters = fighters.filter((f) => !['tbd', 'na'].includes(f.tier) && f.status !== 'paused' && f.status !== 'disqualified')
+  const controlBodyEligible = fighters.filter((f) => f.tier !== 'tbd' && ['referee', 'judge', 'both'].includes(f.role) && f.status !== 'disqualified')
 
   return { fighters, activeFighters, controlBodyEligible, fightersMap, loading }
 }

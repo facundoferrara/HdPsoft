@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
+import { useWeapons } from '../../hooks/useWeapons'
+import { addCustomWeapon } from '../../firebase/writes'
 import styles from './MatchCard.module.css'
 
 const TIER_COLOR = { boffer: '#42a5f5', nylon: '#ab47bc', acero: '#81c784' }
@@ -46,14 +48,14 @@ export default function MatchCard({ match, fightersMap, isBlocked, onReroll, can
       onClick={() => isDraggable && onCardClick?.(match)}
     >
       <div className={styles.header}>
-        <span className={styles.matchNum}>#{match.match_number}</span>
+        <span className={styles.matchNum}>{match.match_number != null ? `#${match.match_number}` : '—'}</span>
         <span className={styles.tier} style={{ color: TIER_COLOR[match.match_tier] }}>
           {match.match_tier?.toUpperCase()}
         </span>
-        <WeaponInput match={match} onUpdate={onUpdateWeapon} />
+        <WeaponSelect match={match} onUpdate={onUpdateWeapon} />
         {match.same_club_warning && <span className={styles.sameClub}>⚠ mismo club</span>}
         {match.fairness_warning && <span className={styles.fairnessWarning}>⚠ desbalance árbitro</span>}
-        {match.role_mismatch_warning && <span className={styles.roleMismatch}>⚠ sin preferencia</span>}
+
         {match.rerolled && <span className={styles.rerolled}>↺</span>}
       </div>
 
@@ -72,27 +74,33 @@ export default function MatchCard({ match, fightersMap, isBlocked, onReroll, can
       </div>
 
       <div className={styles.control}>
-        <span className={styles.controlLabel}>Árbitro:</span>
-        <ControlBodySlot
-          current={referee}
-          candidates={candidates.filter((c) => c.id !== judge1?.id && c.id !== judge2?.id)}
-          disabled={!onAssignRole || !['pending', 'active'].includes(match.status)}
-          onAssign={(id) => onAssignRole(match, 'referee', id)}
-        />
-        <span className={styles.controlLabel}>Jueces:</span>
-        <ControlBodySlot
-          current={judge1}
-          candidates={candidates.filter((c) => c.id !== referee?.id && c.id !== judge2?.id)}
-          disabled={!onAssignRole || !['pending', 'active'].includes(match.status)}
-          onAssign={(id) => onAssignRole(match, 'judge1', id)}
-        />
-        <span className={styles.controlSep}>·</span>
-        <ControlBodySlot
-          current={judge2}
-          candidates={candidates.filter((c) => c.id !== referee?.id && c.id !== judge1?.id)}
-          disabled={!onAssignRole || !['pending', 'active'].includes(match.status)}
-          onAssign={(id) => onAssignRole(match, 'judge2', id)}
-        />
+        <div className={styles.controlRow}>
+          <span className={styles.controlLabel}>Árbitro</span>
+          <ControlBodySlot
+            current={referee}
+            candidates={candidates.filter((c) => c.id !== judge1?.id && c.id !== judge2?.id)}
+            disabled={!onAssignRole || !['pending', 'active'].includes(match.status)}
+            onAssign={(id) => onAssignRole(match, 'referee', id)}
+          />
+        </div>
+        <div className={styles.controlRow}>
+          <span className={styles.controlLabel}>Jueces</span>
+          <span className={styles.controlJudges}>
+            <ControlBodySlot
+              current={judge1}
+              candidates={candidates.filter((c) => c.id !== referee?.id && c.id !== judge2?.id)}
+              disabled={!onAssignRole || !['pending', 'active'].includes(match.status)}
+              onAssign={(id) => onAssignRole(match, 'judge1', id)}
+            />
+            <span className={styles.controlSep}>·</span>
+            <ControlBodySlot
+              current={judge2}
+              candidates={candidates.filter((c) => c.id !== referee?.id && c.id !== judge1?.id)}
+              disabled={!onAssignRole || !['pending', 'active'].includes(match.status)}
+              onAssign={(id) => onAssignRole(match, 'judge2', id)}
+            />
+          </span>
+        </div>
       </div>
 
       {match.status === 'complete' && match.final_score_red != null && (
@@ -124,31 +132,61 @@ export default function MatchCard({ match, fightersMap, isBlocked, onReroll, can
   )
 }
 
-/** Arma acordada del asalto — editable mientras no esté cerrado. */
-function WeaponInput({ match, onUpdate }) {
-  const [value, setValue] = useState(match.weapon?.name ?? '')
+function WeaponSelect({ match, onUpdate }) {
+  const { weapons } = useWeapons()
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState('')
   const editable = ['pending', 'active'].includes(match.status) && !!onUpdate
+  const current = match.weapon?.name ?? ''
 
-  useEffect(() => { setValue(match.weapon?.name ?? '') }, [match.weapon?.name])
+  if (!editable) return <span className={styles.weaponLabel}>{current || '—'}</span>
 
-  if (!editable) return <span className={styles.weaponLabel}>{match.weapon?.name ?? '—'}</span>
-
-  function commit() {
-    const trimmed = value.trim()
-    if (trimmed && trimmed !== match.weapon?.name) onUpdate(match.id, trimmed)
-    else setValue(match.weapon?.name ?? '')
+  if (adding) {
+    return (
+      <span className={styles.newWeaponRow} onClick={(e) => e.stopPropagation()}>
+        <input
+          className={styles.newWeaponInput}
+          value={newName}
+          autoFocus
+          placeholder="Nombre del arma"
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.currentTarget.blur() }
+            if (e.key === 'Escape') { setAdding(false); setNewName('') }
+          }}
+          onBlur={() => {
+            const trimmed = newName.trim()
+            if (trimmed) {
+              addCustomWeapon(trimmed)
+              onUpdate(match.id, trimmed)
+            }
+            setAdding(false); setNewName('')
+          }}
+        />
+      </span>
+    )
   }
 
   return (
-    <input
-      className={styles.weaponInput}
-      value={value}
+    <select
+      className={styles.weaponSelect}
+      value={weapons.includes(current) ? current : '__other__'}
       title="Arma acordada del asalto"
       onClick={(e) => e.stopPropagation()}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
-    />
+      onChange={(e) => {
+        const v = e.target.value
+        if (v === '__new__') { setAdding(true); return }
+        if (v !== '__other__') onUpdate(match.id, v)
+      }}
+    >
+      {!weapons.includes(current) && current && (
+        <option value="__other__">{current}</option>
+      )}
+      {weapons.map((w) => (
+        <option key={w} value={w}>{w}</option>
+      ))}
+      <option value="__new__">+ Nueva arma...</option>
+    </select>
   )
 }
 

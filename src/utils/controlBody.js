@@ -9,7 +9,7 @@
  * @param {string[]} fighterClubs   — clubs de los tiradores [clubRed, clubBlue]
  * @param {object}   roleStats      — { [fighterId]: { refCount, judgeCount } } — acumulado del evento
  * @param {object[]|null} globalStats — lista completa de elegibles, para calcular el piso de fairness
- * @returns {{ refereeId, judge1Id, judge2Id, sameClubWarning, roleMismatchWarning, fairnessWarning } | null}
+ * @returns {{ refereeId, judge1Id, judge2Id, sameClubWarning, fairnessWarning } | null}
  */
 export function assignControlBody(candidates, fighterClubs, roleStats = {}, globalStats = null) {
   if (candidates.length < 3) return null
@@ -18,23 +18,20 @@ export function assignControlBody(candidates, fighterClubs, roleStats = {}, glob
   const pool = preferred.length >= 3 ? preferred : candidates
   const sameClubWarning = preferred.length < 3
 
-  // Árbitro: preferir a quien declaró rol de arbitraje
-  const refPreferred = pool.filter((c) => ['referee', 'both'].includes(c.role))
-  const refPool = refPreferred.length >= 1 ? refPreferred : pool
-  let roleMismatchWarning = refPreferred.length < 1
+  // Árbitro: solo quienes declararon rol de arbitraje
+  const refPool = pool.filter((c) => ['referee', 'both'].includes(c.role))
+  if (refPool.length < 1) return null
 
   const sortedByRef = [...refPool].sort(
     (a, b) => (roleStats[a.id]?.refCount ?? 0) - (roleStats[b.id]?.refCount ?? 0)
   )
   const referee = sortedByRef[0]
 
-  // Jueces: preferir a quien declaró rol de jueceo
-  const judgePool = pool.filter((c) => c.id !== referee.id)
-  const judgePreferred = judgePool.filter((c) => ['judge', 'both'].includes(c.role))
-  const judgeSourcePool = judgePreferred.length >= 2 ? judgePreferred : judgePool
-  if (judgePreferred.length < 2) roleMismatchWarning = true
+  // Jueces: solo quienes declararon rol de jueceo
+  const judgePool = pool.filter((c) => c.id !== referee.id && ['judge', 'both'].includes(c.role))
+  if (judgePool.length < 2) return null
 
-  const sortedByJudge = [...judgeSourcePool].sort(
+  const sortedByJudge = [...judgePool].sort(
     (a, b) => (roleStats[a.id]?.judgeCount ?? 0) - (roleStats[b.id]?.judgeCount ?? 0)
   )
   const judge1 = sortedByJudge[0]
@@ -56,7 +53,6 @@ export function assignControlBody(candidates, fighterClubs, roleStats = {}, glob
     judge1Id: judge1.id,
     judge2Id: judge2.id,
     sameClubWarning,
-    roleMismatchWarning,
     fairnessWarning,
   }
 }
@@ -68,6 +64,6 @@ export function assignControlBody(candidates, fighterClubs, roleStats = {}, glob
 export function getCandidatesForReroll(allFighters, activeFighterIds, matchFighterIds) {
   const excluded = new Set([...activeFighterIds, ...matchFighterIds])
   return allFighters.filter(
-    (f) => !excluded.has(f.id) && f.tier !== 'tbd'
+    (f) => !excluded.has(f.id) && f.tier !== 'tbd' && ['referee', 'judge', 'both'].includes(f.role)
   )
 }

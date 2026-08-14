@@ -12,6 +12,7 @@ import {
 
 export const scoringConfigRef = doc(db, 'config', 'scoring')
 export const eventConfigRef = doc(db, 'config', 'event')
+export const weaponsConfigRef = doc(db, 'config', 'weapons')
 
 // ── Collections ──────────────────────────────────────────────────────────────
 

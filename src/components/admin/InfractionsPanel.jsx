@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '../../firebase/config'
 import { useFighters } from '../../hooks/useFighters'
+import { updateFighterStatus } from '../../firebase/writes'
 import styles from './InfractionsPanel.module.css'
 
 export default function InfractionsPanel() {
@@ -49,18 +50,33 @@ export default function InfractionsPanel() {
       <h3 className={styles.title}>Top 5 infractores</h3>
       <table className={styles.table}>
         <thead>
-          <tr><th>Nombre</th><th>Club</th><th>Adv.</th><th>Amarillas</th><th>Rojas</th></tr>
+          <tr><th>Nombre</th><th>Club</th><th>Adv.</th><th>Amarillas</th><th>Rojas</th><th></th></tr>
         </thead>
         <tbody>
           {infractions.map((inf) => {
             const f = fightersMap[inf.id]
             return (
-              <tr key={inf.id} className={inf.reds > 0 ? styles.rowRed : ''}>
+              <tr key={inf.id} className={`${inf.reds > 0 ? styles.rowRed : ''} ${f?.status === 'disqualified' ? styles.rowDisqualified : ''}`}>
                 <td>{f?.name ?? inf.id}</td>
                 <td>{f?.club ?? '—'}</td>
                 <td>{inf.warnings}</td>
                 <td className={styles.yellow}>{inf.yellows}</td>
                 <td className={styles.red}>{inf.reds}</td>
+                <td>
+                  {f?.status === 'disqualified' ? (
+                    <span className={styles.dqBadge}>DESCALIFICADO</span>
+                  ) : (
+                    <button
+                      className={styles.dqBtn}
+                      onClick={() => {
+                        if (confirm(`¿Descalificar a ${f?.name}? No podrá participar en rondas futuras.`))
+                          updateFighterStatus(inf.id, 'disqualified')
+                      }}
+                    >
+                      Descalificar
+                    </button>
+                  )}
+                </td>
               </tr>
             )
           })}

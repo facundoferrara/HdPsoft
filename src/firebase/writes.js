@@ -6,19 +6,22 @@ import {
   updateDoc,
   writeBatch,
   getDocs,
+  query,
+  where,
   serverTimestamp,
   increment,
+  arrayUnion,
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
-import { matchesRef, roundsRef, byesRef, exchangesRef, fightersRef } from './db'
+import { matchesRef, roundsRef, byesRef, exchangesRef, fightersRef, weaponsConfigRef } from './db'
 
 const TIER_ORDER = { boffer: 0, nylon: 1, acero: 2 }
 
 // ── Activación / cancelación ──────────────────────────────────────────────────
 
-export async function activateMatch(matchId, arena) {
-  await updateDoc(doc(db, 'matches', matchId), { status: 'active', arena })
+export async function activateMatch(matchId, arena, matchNumber) {
+  await updateDoc(doc(db, 'matches', matchId), { status: 'active', arena, match_number: matchNumber, activated_at: serverTimestamp() })
 }
 
 export async function cancelMatch(matchId) {
@@ -42,7 +45,7 @@ export async function updateMatchWeapon(matchId, weaponName) {
  * de `control_stats` (si se pasa `prevControlBody`, resta a quien sale y suma a quien entra).
  *
  * @param {string} matchId
- * @param {{ refereeId, judge1Id, judge2Id, sameClubWarning, roleMismatchWarning, fairnessWarning }} next
+ * @param {{ refereeId, judge1Id, judge2Id, sameClubWarning, fairnessWarning }} next
  * @param {{ refereeId, judge1Id, judge2Id }|null} prevControlBody — ids previos, para ajustar stats
  */
 export async function updateMatchControlBody(matchId, next, prevControlBody = null) {
@@ -54,7 +57,6 @@ export async function updateMatchControlBody(matchId, next, prevControlBody = nu
     judge_2_id: next.judge2Id,
     same_club_warning: next.sameClubWarning ?? false,
     fairness_warning: next.fairnessWarning ?? false,
-    role_mismatch_warning: next.roleMismatchWarning ?? false,
     rerolled: true,
   })
 
@@ -100,23 +102,37 @@ export async function completeMatch(matchId, {
   winnerId,
   endedEarly,
   endedByDepletion,
+  endedByRedCard,
+  redCardedFighter,
   fighterRedId,
   fighterBlueId,
   defenseLossRed,
   defenseLossBlue,
+  cleanHandHitsRed,
+  cleanHandHitsBlue,
+  cleanBodyHitsRed,
+  cleanBodyHitsBlue,
   cleanHeadHitsRed,
   cleanHeadHitsBlue,
   contrapasoRescuedRed,
   contrapasoRescuedBlue,
   contrapasoCountRed,
   contrapasoCountBlue,
+  cleanExchangesRed,
+  cleanExchangesBlue,
+  totalValidExchanges,
   handHitsRed,
   handHitsBlue,
   doubleHitCount,
   weaponName,
 }) {
-  // Batch: match + leaderboard (atomico)
   const batch = writeBatch(db)
+
+  // Leaderboard points: expelled → 0, opponent → deferred (0 now, calibration at round close)
+  const redIsExpelled  = endedByRedCard && (redCardedFighter === 'red' || redCardedFighter === 'both')
+  const blueIsExpelled = endedByRedCard && (redCardedFighter === 'blue' || redCardedFighter === 'both')
+  const leaderboardRed  = redIsExpelled || (endedByRedCard && !redIsExpelled) ? 0 : finalScoreRed
+  const leaderboardBlue = blueIsExpelled || (endedByRedCard && !blueIsExpelled) ? 0 : finalScoreBlue
 
   batch.update(doc(db, 'matches', matchId), {
     status: 'complete',
@@ -125,32 +141,43 @@ export async function completeMatch(matchId, {
     winner_id: winnerId,
     ended_early: endedEarly,
     ended_by_depletion: endedByDepletion,
+    ended_by_red_card: endedByRedCard ?? false,
+    red_carded_fighter: redCardedFighter ?? null,
+    calibration_pending: endedByRedCard && redCardedFighter !== 'both',
   })
 
   const wldRed = winnerId === fighterRedId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
   const wldBlue = winnerId === fighterBlueId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
 
   batch.update(doc(db, 'leaderboard', fighterRedId), {
-    total_points: increment(Math.round(finalScoreRed * 100) / 100),
+    total_points: increment(Math.round(leaderboardRed * 100) / 100),
     matches_complete: increment(1),
     [wldRed]: increment(1),
     points_lost_defense: increment(defenseLossRed ?? 0),
+    clean_hand_hits: increment(cleanHandHitsRed ?? 0),
+    clean_body_hits: increment(cleanBodyHitsRed ?? 0),
     clean_head_hits: increment(cleanHeadHitsRed ?? 0),
     points_rescued_contrapaso: increment(contrapasoRescuedRed ?? 0),
     contrapaso_count: increment(contrapasoCountRed ?? 0),
+    clean_exchanges_won: increment(cleanExchangesRed ?? 0),
+    total_valid_exchanges: increment(totalValidExchanges ?? 0),
     hand_hits_landed: increment(handHitsRed ?? 0),
     double_hit_count: increment(doubleHitCount ?? 0),
     wins_espada_larga: increment(espadaLargaWin(winnerId, fighterRedId, weaponName)),
   })
 
   batch.update(doc(db, 'leaderboard', fighterBlueId), {
-    total_points: increment(Math.round(finalScoreBlue * 100) / 100),
+    total_points: increment(Math.round(leaderboardBlue * 100) / 100),
     matches_complete: increment(1),
     [wldBlue]: increment(1),
     points_lost_defense: increment(defenseLossBlue ?? 0),
+    clean_hand_hits: increment(cleanHandHitsBlue ?? 0),
+    clean_body_hits: increment(cleanBodyHitsBlue ?? 0),
     clean_head_hits: increment(cleanHeadHitsBlue ?? 0),
     points_rescued_contrapaso: increment(contrapasoRescuedBlue ?? 0),
     contrapaso_count: increment(contrapasoCountBlue ?? 0),
+    clean_exchanges_won: increment(cleanExchangesBlue ?? 0),
+    total_valid_exchanges: increment(totalValidExchanges ?? 0),
     hand_hits_landed: increment(handHitsBlue ?? 0),
     double_hit_count: increment(doubleHitCount ?? 0),
     wins_espada_larga: increment(espadaLargaWin(winnerId, fighterBlueId, weaponName)),
@@ -158,7 +185,6 @@ export async function completeMatch(matchId, {
 
   await batch.commit()
 
-  // Exchanges (subcollección — fuera del batch por limitación de Firestore)
   const exRef = exchangesRef(matchId)
   for (const ex of exchanges) {
     await addDoc(exRef, ex)
@@ -239,7 +265,7 @@ export async function generateRound(roundNumber, pairs) {
   const sequenceBase = allMatchesSnap.size
 
   const batch = writeBatch(db)
-  pairs.forEach(({ red, blue, refereeId, judge1Id, judge2Id, sameClubWarning, roleMismatchWarning, fairnessWarning }, idx) => {
+  pairs.forEach(({ red, blue, refereeId, judge1Id, judge2Id, sameClubWarning, fairnessWarning }, idx) => {
     const matchRef = doc(collection(db, 'matches'))
     const match_tier =
       TIER_ORDER[red.tier] <= TIER_ORDER[blue.tier] ? red.tier : blue.tier
@@ -247,14 +273,14 @@ export async function generateRound(roundNumber, pairs) {
     batch.set(matchRef, {
       round_id: roundRef.id,
       sequence_number: sequenceBase + idx + 1,
-      match_number: idx + 1,
+      match_number: null,
       fighter_red_id: red.id,
       fighter_blue_id: blue.id,
       referee_id: refereeId ?? null,
       judge_1_id: judge1Id ?? null,
       judge_2_id: judge2Id ?? null,
       match_tier,
-      weapon: { name: 'espada larga' }, // Ari lo acuerda verbalmente; editable en scheduler
+      weapon: { name: 'sable' },
       arena: null,
       status: 'pending',
       final_score_red: null,
@@ -264,7 +290,6 @@ export async function generateRound(roundNumber, pairs) {
       ended_by_depletion: false,
       same_club_warning: sameClubWarning ?? false,
       fairness_warning: fairnessWarning ?? false,
-      role_mismatch_warning: roleMismatchWarning ?? false,
       rerolled: false,
     })
 
@@ -278,10 +303,67 @@ export async function generateRound(roundNumber, pairs) {
 }
 
 export async function closeRound(roundId) {
+  await applyCalibration(roundId)
   await updateDoc(doc(db, 'rounds', roundId), {
     status: 'complete',
     completed_at: serverTimestamp(),
   })
+}
+
+/**
+ * Aplica puntuación de calibración al cerrar una ronda:
+ * 1. Calcula el promedio de puntos de asaltos normales (sin tarjeta roja, sin bye)
+ * 2. Asigna calibración a oponentes de tarjeta roja y bye fighters
+ */
+async function applyCalibration(roundId) {
+  const matchSnap = await getDocs(query(matchesRef, where('round_id', '==', roundId)))
+  const byeSnap   = await getDocs(query(byesRef, where('round_id', '==', roundId)))
+
+  const normalScores = []
+  const redCardMatches = []
+
+  for (const d of matchSnap.docs) {
+    const m = d.data()
+    if (m.status !== 'complete') continue
+    if (m.ended_by_red_card) {
+      redCardMatches.push({ id: d.id, ...m })
+    } else {
+      normalScores.push(m.final_score_red, m.final_score_blue)
+    }
+  }
+
+  if (normalScores.length === 0 && redCardMatches.length === 0 && byeSnap.empty) return
+
+  const calibration = normalScores.length > 0
+    ? Math.round((normalScores.reduce((a, b) => a + b, 0) / normalScores.length) * 100) / 100
+    : 0
+
+  const batch = writeBatch(db)
+
+  // Red card opponents: increment their leaderboard by calibration
+  for (const m of redCardMatches) {
+    if (m.red_carded_fighter === 'both') continue
+    const opponentId = m.red_carded_fighter === 'red' ? m.fighter_blue_id : m.fighter_red_id
+    batch.update(doc(db, 'leaderboard', opponentId), {
+      total_points: increment(Math.round(calibration * 100) / 100),
+    })
+    batch.update(doc(db, 'matches', m.id), {
+      calibration_pending: false,
+      calibration_score: calibration,
+    })
+  }
+
+  // Bye fighters: set calibration and increment leaderboard
+  for (const d of byeSnap.docs) {
+    const b = d.data()
+    if (b.calibration_points != null && b.calibration_points > 0) continue
+    batch.update(d.ref, { calibration_points: calibration })
+    batch.update(doc(db, 'leaderboard', b.fighter_id), {
+      total_points: increment(Math.round(calibration * 100) / 100),
+    })
+  }
+
+  await batch.commit()
 }
 
 // ── Bye ───────────────────────────────────────────────────────────────────────
@@ -293,10 +375,11 @@ export async function registerBye(fighterId, roundId, calibrationPoints) {
     round_id: roundId,
     calibration_points: calibrationPoints,
   })
-  batch.update(doc(db, 'leaderboard', fighterId), {
-    total_points: increment(Math.round(calibrationPoints * 100) / 100),
-    bye_count: increment(1),
-  })
+  const lbUpdate = { bye_count: increment(1) }
+  if (calibrationPoints != null) {
+    lbUpdate.total_points = increment(Math.round(calibrationPoints * 100) / 100)
+  }
+  batch.update(doc(db, 'leaderboard', fighterId), lbUpdate)
   await batch.commit()
 }
 
@@ -316,9 +399,86 @@ export async function updateFighterGear(fighterId, tier) {
   await updateDoc(doc(db, 'fighters', fighterId), { tier })
 }
 
-/** Alta de una persona presente que no compite (staff/colaborador), elegible como cuerpo de control. */
-export async function addStaffMember({ name, club, role }) {
-  await addDoc(fightersRef, { name, club: club || 'Ind', tier: 'na', role: role || 'both' })
+export async function updateFighterInfo(fighterId, fields) {
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'fighters', fighterId), fields)
+  batch.update(doc(db, 'leaderboard', fighterId), fields)
+  await batch.commit()
+}
+
+export async function deleteFighter(fighterId) {
+  const batch = writeBatch(db)
+  batch.delete(doc(db, 'fighters', fighterId))
+  batch.delete(doc(db, 'leaderboard', fighterId))
+  await batch.commit()
+}
+
+export async function updateFighterStatus(fighterId, newStatus) {
+  if (newStatus === 'active') {
+    await updateDoc(doc(db, 'fighters', fighterId), { status: 'active' })
+    return { cancelledMatch: false }
+  }
+
+  const roundSnap = await getDocs(query(roundsRef, where('status', '==', 'active')))
+
+  let pendingMatchDoc = null
+  let opponentId = null
+  let roundId = null
+
+  if (!roundSnap.empty) {
+    roundId = roundSnap.docs[0].id
+    const matchSnap = await getDocs(query(matchesRef, where('round_id', '==', roundId)))
+    pendingMatchDoc = matchSnap.docs.find((d) => {
+      const m = d.data()
+      return m.status === 'pending' && (m.fighter_red_id === fighterId || m.fighter_blue_id === fighterId)
+    })
+    if (pendingMatchDoc) {
+      const m = pendingMatchDoc.data()
+      opponentId = m.fighter_red_id === fighterId ? m.fighter_blue_id : m.fighter_red_id
+    }
+  }
+
+  const batch = writeBatch(db)
+  batch.update(doc(db, 'fighters', fighterId), { status: newStatus })
+
+  if (pendingMatchDoc && roundId && opponentId) {
+    batch.update(pendingMatchDoc.ref, { status: 'cancelled' })
+    batch.set(doc(byesRef), {
+      fighter_id: opponentId,
+      round_id: roundId,
+      calibration_points: null,
+    })
+    batch.update(doc(db, 'leaderboard', opponentId), { bye_count: increment(1) })
+    if (newStatus === 'paused') {
+      batch.set(doc(byesRef), {
+        fighter_id: fighterId,
+        round_id: roundId,
+        calibration_points: null,
+      })
+      batch.update(doc(db, 'leaderboard', fighterId), { bye_count: increment(1) })
+    }
+  }
+
+  await batch.commit()
+  return { cancelledMatch: !!pendingMatchDoc, opponentId }
+}
+
+export async function addCustomWeapon(weaponName) {
+  await updateDoc(weaponsConfigRef, { custom: arrayUnion(weaponName) })
+}
+
+export async function addStaffMember({ name, club, role, tier }) {
+  const effectiveTier = tier || 'na'
+  const effectiveClub = club || 'Ind'
+  const ref = await addDoc(fightersRef, { name, club: effectiveClub, tier: effectiveTier, role: role || 'both' })
+  await setDoc(doc(db, 'leaderboard', ref.id), {
+    fighter_id: ref.id, name, club: effectiveClub,
+    total_points: 0, rounds_played: 0, matches_complete: 0, bye_count: 0,
+    points_lost_defense: 0, clean_head_hits: 0, points_rescued_contrapaso: 0,
+    wins_espada_larga: 0, matches_won: 0, matches_lost: 0, matches_drawn: 0,
+    hand_hits_landed: 0, double_hit_count: 0, contrapaso_count: 0,
+    clean_hand_hits: 0, clean_body_hits: 0, clean_exchanges_won: 0, total_valid_exchanges: 0,
+  })
 }
 
 // ── Estado del evento ─────────────────────────────────────────────────────────

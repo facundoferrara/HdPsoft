@@ -1,6 +1,6 @@
-.container { display: flex; flex-direction: column; gap: 1.25rem; }
-.loading { color: #666; padding: 1rem; }
-.empty { color: #555; font-style: italic; padding: 2rem; text-align: center; }
+.container { display: flex; flex-direction: column; gap: 1.25rem; height: 100%; overflow-y: auto; }
+.loading { color: #9098b0; padding: 1rem; }
+.empty { color: #8890b0; font-style: italic; padding: 2rem; text-align: center; }
 
 .roundHeader {
   display: flex;
@@ -9,25 +9,25 @@
 }
 
 .roundTitle {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  color: #aaa;
+  color: #a8b0c0;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .generateBtn {
   padding: 0.5rem 1.25rem;
-  background: #1e3a4a;
-  border: 1px solid #00bcd4;
+  background: #2a2210;
+  border: 1px solid #c8a55a;
   border-radius: 6px;
-  color: #00bcd4;
-  font-size: 0.9rem;
+  color: #c8a55a;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
 }
-.generateBtn:hover { background: #254d63; }
+.generateBtn:hover { background: #3a3218; }
 .generateBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .breakBtn {
@@ -57,9 +57,9 @@
 }
 
 .matchColumnTitle {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  color: #666;
+  color: #9098b0;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin: 0 0 0.6rem;
@@ -69,6 +69,25 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 0.75rem;
+}
+
+.completedSeparator {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.75rem 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #5a6488;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.completedSeparator::before,
+.completedSeparator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #1e2455;
 }
 
 @media (min-width: 1024px) {

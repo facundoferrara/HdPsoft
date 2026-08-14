@@ -11,15 +11,16 @@ import { useEventStatus } from '../hooks/useEventStatus'
 import styles from './Admin.module.css'
 
 const TABS = [
-  { id: 'scheduler', label: 'Scheduler' },
+  { id: 'scheduler', label: 'Organizador' },
   { id: 'results', label: 'Resultados' },
   { id: 'infractions', label: 'Infracciones' },
-  { id: 'gear', label: 'Gear Check' },
+  { id: 'gear', label: 'Padrón' },
 ]
 
 function AdminLayout() {
   const [activeTab, setActiveTab] = useState('scheduler')
   const [showBreakPopup, setShowBreakPopup] = useState(false)
+  const [showDisplay, setShowDisplay] = useState(false)
   const { eventStatus } = useEventStatus()
 
   const isBreak = eventStatus?.status === 'break'
@@ -40,6 +41,12 @@ function AdminLayout() {
           ))}
         </nav>
         <div className={styles.headerRight}>
+          <button
+            className={`${styles.displayBtn} ${showDisplay ? styles.displayBtnActive : ''}`}
+            onClick={() => setShowDisplay((v) => !v)}
+          >
+            📺 Display
+          </button>
           {isBreak ? (
             <button className={`${styles.pauseBtn} ${styles.resumeBtn}`} onClick={resumeEvent}>
               ▶ Reanudar
@@ -65,17 +72,27 @@ function AdminLayout() {
 
       <main className={styles.content}>
         {activeTab === 'scheduler' && (
-          <>
+          <div style={{ height: '100%', overflowY: 'auto' }}>
             <RoundProjection />
             <Scheduler onRoundComplete={() => setShowBreakPopup(true)} />
-          </>
+          </div>
         )}
         {activeTab === 'results' && <ResultsForm />}
-        {activeTab === 'infractions' && <InfractionsPanel />}
-        {activeTab === 'gear' && <GearCheck />}
+        {activeTab === 'infractions' && <div style={{ height: '100%', overflowY: 'auto' }}><InfractionsPanel /></div>}
+        {activeTab === 'gear' && <div style={{ height: '100%', overflowY: 'auto' }}><GearCheck /></div>}
       </main>
 
       {showBreakPopup && <BreakPopup onClose={() => setShowBreakPopup(false)} />}
+
+      {showDisplay && (
+        <div className={styles.displayPanel}>
+          <div className={styles.displayPanelHeader}>
+            <span>Vista TV</span>
+            <button className={styles.displayPanelClose} onClick={() => setShowDisplay(false)}>✕</button>
+          </div>
+          <iframe src="/display" className={styles.displayIframe} title="Display preview" />
+        </div>
+      )}
     </div>
   )
 }
