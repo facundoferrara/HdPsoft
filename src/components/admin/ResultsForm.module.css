@@ -1,57 +1,189 @@
-﻿/* ── Base ─────────────────────────────────────────────────────────────────── */
-.page  { display: flex; flex-direction: column; gap: 1rem; max-width: 640px; margin: 0 auto; width: 100%; }
-.empty { color: #666; font-style: italic; padding: 2rem; }
+/* -- Split layout --------------------------------------------------------- */
+.splitLayout {
+  display: flex; gap: 0; height: 100%; min-height: 0;
+}
+
+.sidebar {
+  width: 33%; min-width: 260px; max-width: 380px;
+  display: flex; flex-direction: column;
+  border-right: 1px solid #1e2455;
+  background: #0a0f30;
+}
+
+.mainPanel {
+  flex: 1; min-width: 0;
+  overflow-y: auto;
+  padding: 0.4rem 0.75rem;
+}
+
+.mainEmpty {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; color: #8890b0; font-size: 0.9rem; font-style: italic;
+}
+
+/* -- Round tabs ----------------------------------------------------------- */
+.roundTabs {
+  display: flex; gap: 0; border-bottom: 1px solid #1e2455;
+  padding: 0; flex-shrink: 0;
+}
+.roundTab {
+  flex: 1; padding: 0.5rem 0.3rem; background: transparent; border: none;
+  border-bottom: 2px solid transparent;
+  color: #8890b0; font-size: 0.88rem; font-weight: 700; cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+}
+.roundTab:hover { color: #a8b0c0; }
+.roundTabActive { color: #e8ecf2; border-bottom-color: #c8a55a; }
+.roundTabComplete { color: #6a9a6a; }
+.roundTabComplete.roundTabActive { color: #66bb6a; border-bottom-color: #66bb6a; }
+
+.sidebarTitle {
+  padding: 0.5rem 0.75rem; font-size: 0.88rem; font-weight: 700;
+  color: #8890a0; text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid #161c4a; flex-shrink: 0;
+}
+.roundDone { color: #6a9a6a; font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+/* -- Sidebar match cards -------------------------------------------------- */
+.sidebarList {
+  display: flex; flex-direction: column; gap: 0.35rem; flex: 1;
+  overflow-y: auto; padding: 0.5rem;
+}
+
+.sidebarSeparator {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.4rem 0 0.15rem;
+  font-size: 0.65rem; font-weight: 700; color: #6a7494;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.sidebarSeparator::after {
+  content: ''; flex: 1; height: 1px; background: #1e2455;
+}
+
+.matchCard {
+  display: flex; flex-direction: column; gap: 0.3rem;
+  padding: 0.5rem 0.65rem; background: #131845; border: 1px solid #242a5a;
+  border-radius: 6px; cursor: pointer; text-align: left;
+  transition: border-color 0.12s, background 0.12s;
+}
+.matchCard:hover { border-color: #6a7494; background: #181e50; }
+.matchCardSelected { border-color: #c8a55a; background: #1a1840; box-shadow: inset 3px 0 0 #c8a55a; }
+.matchCardActive { background: #0d2214; border-color: #2a5a2a; }
+.matchCardActive:hover { background: #102a18; border-color: #4caf50; }
+.matchCardComplete { background: #0e1235; border-color: #1a2040; }
+.matchCardComplete:hover { background: #131845; }
+.matchCardPending { }
+
+.cardHeader {
+  display: flex; align-items: center; gap: 0.35rem;
+}
+.cardNum {
+  font-size: 0.75rem; font-weight: 700; color: #8890b0;
+  font-variant-numeric: tabular-nums;
+}
+.cardTier {
+  font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; padding: 0.05rem 0.3rem;
+  border-radius: 3px; line-height: 1.4;
+}
+.cardLive {
+  margin-left: auto; font-size: 0.6rem; font-weight: 700; color: #66bb6a;
+  background: rgba(76,175,80,0.12); padding: 0.1rem 0.35rem; border-radius: 3px;
+  letter-spacing: 0.03em; text-transform: uppercase;
+}
+.cardScore {
+  margin-left: auto; font-size: 0.82rem; font-weight: 700; color: #6a7494;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardFighters {
+  display: flex; align-items: center; gap: 0.35rem;
+}
+.cardFighterSide {
+  flex: 1; min-width: 0;
+  display: flex; align-items: baseline; gap: 0.25rem;
+}
+.cardFighterSide:last-child { justify-content: flex-end; text-align: right; }
+.cardVs {
+  font-size: 0.6rem; color: #5a6488; flex-shrink: 0; font-weight: 600;
+}
+.dotRed { color: #ef5350; font-size: 0.5rem; flex-shrink: 0; }
+.dotBlue { color: #42a5f5; font-size: 0.5rem; flex-shrink: 0; }
+.cardName {
+  font-size: 0.78rem; font-weight: 600; color: #d0d4e0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.cardClub {
+  font-size: 0.62rem; color: #8890b0; white-space: nowrap; flex-shrink: 0;
+}
+
+/* -- Base (used by scoresheet page inside mainPanel) ---------------------- */
+.page  { display: flex; flex-direction: column; gap: 0.3rem; width: 100%; height: 100%; }
+.empty { color: #6a7494; font-style: italic; padding: 1rem 0.75rem; }
 
 .sectionTitle {
   font-size: 0.9rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.05em; color: #888; margin: 0;
+  letter-spacing: 0.05em; color: #8890a0; margin: 0;
 }
 
-/* ── Match selector ──────────────────────────────────────────────────────── */
-.matchList { display: flex; flex-direction: column; gap: 0.5rem; }
+/* -- Fighter name colours ------------------------------------------------- */
+.redName  { color: #ef5350; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.blueName { color: #42a5f5; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.matchOption {
-  display: flex; align-items: center; gap: 0.75rem;
-  padding: 0.85rem 1.25rem; background: #1a1a1a; border: 1px solid #333;
-  border-radius: 8px; color: #f0f0f0; font-size: 0.95rem; cursor: pointer;
-  transition: background 0.1s, border-color 0.1s; text-align: left;
-}
-.matchOption:hover { background: #222; border-color: #555; }
-
-.arena { font-size: 0.75rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; min-width: 60px; }
-.vs    { color: #555; }
-
-/* ── Fighter name colours ────────────────────────────────────────────────── */
-.redName  { color: #ef5350; font-weight: 700; }
-.blueName { color: #42a5f5; font-weight: 700; }
-
-/* ── Sheet header ────────────────────────────────────────────────────────── */
+/* -- Sheet header --------------------------------------------------------- */
 .sheetHeader {
   position: relative;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 0.75rem; padding: 0.75rem 7.5rem 0.75rem 2.75rem;
-  background: #141414; border: 1px solid #222; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.75rem; padding: 0.5rem 2.5rem;
+  background: #111640; border: 1px solid #1e2455; border-radius: 6px;
 }
-.sheetSide { display: flex; align-items: center; gap: 0.5rem; }
+.sheetSide {
+  display: flex; align-items: center; gap: 0.4rem;
+  flex: 1; min-width: 0;
+}
 .sheetSideRight { flex-direction: row-reverse; }
 
-/* Posicionadas absoluto: no participan del space-between rojo/vs/azul, así ese
-   trio queda simétrico sin importar el ancho de estos botones. */
-.backArrowBtn {
-  position: absolute; top: 0.5rem; left: 0.6rem;
-  width: 1.9rem; height: 1.9rem; display: flex; align-items: center; justify-content: center;
-  padding: 0; background: #1a1a1a; border: 1px solid #444; border-radius: 50%;
-  color: #999; font-size: 1rem; line-height: 1; cursor: pointer;
+.weaponBar {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.25rem 0.75rem; background: #111640; border: 1px solid #1e2455;
+  border-radius: 5px; font-size: 0.82rem;
 }
-.backArrowBtn:hover { border-color: #00bcd4; color: #00bcd4; }
+.weaponBarLabel { color: #6a7494; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.72rem; }
+.weaponBarSelect {
+  background: #0e1338; border: 1px solid #242a5a; border-radius: 4px;
+  color: #c0c8d8; padding: 0.25rem 0.4rem; font-size: 0.82rem; cursor: pointer;
+}
+.weaponBarSelect:focus { outline: none; border-color: #6a7494; }
+.weaponBarInput {
+  background: #0e1338; border: 1px solid #4a5080; border-radius: 4px;
+  color: #c0c8d8; padding: 0.25rem 0.4rem; font-size: 0.82rem; width: 140px;
+}
+.weaponBarInput:focus { outline: none; border-color: #6a7aaa; }
+
+.vs { color: #6a7494; font-size: 0.82rem; flex-shrink: 0; }
+
+.backArrowBtn {
+  position: absolute; top: 50%; left: 0.5rem; transform: translateY(-50%);
+  width: 1.6rem; height: 1.6rem; display: flex; align-items: center; justify-content: center;
+  padding: 0; background: #161c4a; border: 1px solid #3a4075; border-radius: 50%;
+  color: #9098a8; font-size: 0.9rem; line-height: 1; cursor: pointer;
+}
+.backArrowBtn:hover { border-color: #c8a55a; color: #c8a55a; }
+
+.actionRow {
+  display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.alreadyDoneLabel {
+  color: #81c784; font-size: 0.85rem; font-weight: 600; font-style: italic;
+}
 
 .overrideToggleBtn {
-  position: absolute; top: 0.55rem; right: 0.75rem;
-  padding: 0.3rem 0.7rem; background: #1a1a1a; border: 1px solid #444;
-  border-radius: 14px; color: #999; font-size: 0.72rem; font-weight: 600; cursor: pointer;
+  padding: 0.5rem 1rem; background: #1a1408; border: 1px solid #6a5a30;
+  border-radius: 6px; color: #c8a55a; font-size: 0.78rem; font-weight: 600; cursor: pointer;
 }
-.overrideToggleBtn:hover { border-color: #f5a623; color: #f5a623; }
-.overrideToggleBtnActive { background: #3a2a0a; border-color: #f5a623; color: #f5a623; }
+.overrideToggleBtn:hover { border-color: #f5a623; color: #f5a623; background: #2a2010; }
 
 .overrideForm {
   display: flex; flex-direction: column; gap: 0.75rem;
@@ -62,110 +194,112 @@
 .overrideScores { display: flex; align-items: flex-end; gap: 0.75rem; }
 .overrideScoreField { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; }
 .overrideScoreInput {
-  width: 90px; padding: 0.4rem 0.5rem; background: #111; border: 1px solid #333;
-  border-radius: 5px; color: #eee; font-size: 1.1rem; font-weight: 700;
+  width: 90px; padding: 0.4rem 0.5rem; background: #0e1338; border: 1px solid #2a3065;
+  border-radius: 5px; color: #e8ecf2; font-size: 1.1rem; font-weight: 700;
 }
 
 .overrideNoteInput {
-  padding: 0.5rem 0.6rem; background: #111; border: 1px solid #333; border-radius: 5px;
-  color: #eee; font-size: 0.85rem; resize: vertical; font-family: inherit;
+  padding: 0.5rem 0.6rem; background: #0e1338; border: 1px solid #2a3065; border-radius: 5px;
+  color: #e8ecf2; font-size: 0.85rem; resize: vertical; font-family: inherit;
 }
-.overrideNoteInput::placeholder { color: #555; }
+.overrideNoteInput::placeholder { color: #6a7494; }
 
-.cardBadges { display: flex; gap: 0.3rem; }
-.badgeAdv    { padding: 0.15rem 0.45rem; background: #2a2a2a; border: 1px solid #555; border-radius: 3px; font-size: 0.72rem; color: #aaa; }
-.badgeYellow { padding: 0.15rem 0.45rem; background: #3a2e00; border: 1px solid #f5c518; border-radius: 3px; font-size: 0.72rem; color: #f5c518; font-weight: 700; }
+.cardBadges { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.badgeAdv    { padding: 0.1rem 0.35rem; background: #242a5a; border: 1px solid #4a5080; border-radius: 3px; font-size: 0.65rem; color: #a8b0c0; }
+.badgeYellow { padding: 0.1rem 0.35rem; background: #3a2e00; border: 1px solid #f5c518; border-radius: 3px; font-size: 0.65rem; color: #f5c518; font-weight: 700; }
+.badgeRed { padding: 0.1rem 0.35rem; background: #3a1010; border: 1px solid #ef5350; border-radius: 3px; font-size: 0.65rem; color: #ef5350; font-weight: 700; }
+.badgeExpelled { padding: 0.1rem 0.35rem; background: #5a1010; border: 1px solid #ff1744; border-radius: 3px; font-size: 0.65rem; color: #ff1744; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 
-/* ── Exchange block ──────────────────────────────────────────────────────── */
+/* -- Exchange block ------------------------------------------------------- */
 .exchBlock {
   display: flex; flex-direction: column;
-  border: 1px solid #222; border-radius: 8px; overflow: hidden;
+  border: 1px solid #1e2455; border-radius: 6px; overflow: hidden;
+  flex: 1; min-height: 0;
 }
 
-/* Invalids sub-section */
 .invalidsSection {
-  background: #0d0d0d; padding: 0.6rem 0.9rem;
-  border-bottom: 1px solid #1e1e1e;
-  display: flex; flex-direction: column; gap: 0.4rem;
+  background: #0a0f30; padding: 0.25rem 0.75rem;
+  border-bottom: 1px solid #161c4a;
+  display: flex; flex-direction: column; gap: 0.25rem;
 }
 .invalidsHeader { display: flex; align-items: center; justify-content: space-between; }
-.invalidsLabel  { font-size: 0.72rem; color: #555; text-transform: uppercase; letter-spacing: 0.06em; }
+.invalidsLabel  { font-size: 0.68rem; color: #8890b0; text-transform: uppercase; letter-spacing: 0.06em; }
 
 .addInvalidBtn {
-  padding: 0.2rem 0.6rem; background: transparent; border: 1px dashed #333;
-  border-radius: 4px; color: #555; font-size: 0.78rem; cursor: pointer;
+  padding: 0.1rem 0.5rem; background: transparent; border: 1px dashed #2a3065;
+  border-radius: 4px; color: #8890b0; font-size: 0.72rem; cursor: pointer;
 }
-.addInvalidBtn:hover { border-color: #555; color: #aaa; }
+.addInvalidBtn:hover { border-color: #6a7494; color: #a8b0c0; }
 
 .invalidRow {
-  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
-  padding: 0.35rem 0.5rem; background: #111; border: 1px solid #1e1e1e;
-  border-radius: 5px;
+  display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+  padding: 0.2rem 0.4rem; background: #0e1338; border: 1px solid #161c4a;
+  border-radius: 4px;
 }
 
 .notesInput {
   flex: 1; min-width: 120px; padding: 0.25rem 0.5rem;
-  background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 4px;
-  color: #ccc; font-size: 0.82rem;
+  background: #161c4a; border: 1px solid #242a5a; border-radius: 4px;
+  color: #c0c8d8; font-size: 0.82rem;
 }
-.notesInput::placeholder { color: #444; }
+.notesInput::placeholder { color: #5a6488; }
 
 .removeInvalidBtn {
   padding: 0.1rem 0.4rem; background: transparent; border: none;
-  color: #444; cursor: pointer; font-size: 0.8rem;
+  color: #5a6488; cursor: pointer; font-size: 0.8rem;
 }
 .removeInvalidBtn:hover { color: #f44; }
 
 /* Valid exchange grid */
 .exchGrid {
-  background: #111; padding: 0.85rem 1rem;
-  display: flex; flex-direction: column; gap: 0.65rem;
+  background: #0e1338; padding: 0.4rem 1rem;
+  display: flex; flex-direction: column; gap: 0.3rem;
+  flex: 1; min-height: 0;
 }
 
 .exchGridHeader {
   position: relative;
   display: flex; align-items: baseline; justify-content: flex-start;
-  min-height: 1.7rem;
-  padding-bottom: 0.2rem;
+  min-height: 1.3rem;
 }
-.exchGridTitle { font-size: 0.78rem; color: #555; text-transform: uppercase; letter-spacing: 0.07em; }
+.exchGridTitle { font-size: 0.68rem; color: #6a7494; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; }
 .scoreIn {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  display: flex; align-items: baseline; gap: 0.6rem;
-  font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  display: flex; align-items: baseline; gap: 0.5rem;
+  font-size: 1.1rem; font-weight: 700; font-variant-numeric: tabular-nums;
 }
-.scoreDash { color: #444; }
+.scoreDash { color: #5a6488; }
 
-/* ── Tap grid — planilla eidética ────────────────────────────────────────── */
+/* -- Tap grid -- planilla eidetica ---------------------------------------- */
 .tapGrid {
   display: flex;
   justify-content: center;
   align-items: start;
-  gap: 1.5rem;
+  gap: 0.4rem;
 }
 
 .zoneButtons {
-  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.2rem;
+  flex-shrink: 0;
 }
 
 .zoneButtonsName {
-  font-size: 0.78rem; font-weight: 700; text-align: center;
-  max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.68rem; font-weight: 700; text-align: center;
+  max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-/* column-reverse: PRIMARY_ZONES = [hand,body,head] = [1,2,3] en ese orden en el DOM,
-   pero se pintan de arriba hacia abajo como 3,2,1 — sin tocar el array ni la lógica de zonas. */
 .zoneStack {
-  display: flex; flex-direction: column-reverse; gap: 0.4rem;
+  display: flex; flex-direction: column-reverse; gap: 0.15rem;
 }
 
 .zoneBtn {
-  width: 52px; padding: 0.5rem 0; text-align: center;
-  background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 6px;
-  color: #999; font-size: 1.05rem; font-weight: 700;
+  width: 54px; padding: 0.3rem 0.5rem; text-align: center;
+  background: #161c4a; border: 1px solid #242a5a; border-radius: 5px;
+  color: #c0c8d8; font-size: 0.9rem; font-weight: 700;
   cursor: pointer; transition: background 0.1s, color 0.1s, border-color 0.1s;
+  box-sizing: border-box;
 }
-.zoneBtn:hover:not(:disabled) { background: #222; border-color: #555; color: #ddd; }
+.zoneBtn:hover:not(:disabled) { background: #1e2455; border-color: #6a7494; color: #d8dce6; }
 .zoneBtn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .zoneBtnRed:hover:not(:disabled)  { border-color: #ef535066; }
@@ -176,75 +310,133 @@
 .zoneBtnContra              { background: #2a2210; border-color: #f5c518; color: #f5c518; }
 
 .presaBtn {
-  width: 52px; padding: 0.3rem 0;
-  background: #161616; border: 1px dashed #333; border-radius: 12px;
-  color: #777; font-size: 0.72rem; font-weight: 600; cursor: pointer;
+  width: 54px; padding: 0.15rem 0;
+  background: #111640; border: 1px dashed #2a3065; border-radius: 10px;
+  color: #9098b0; font-size: 0.65rem; font-weight: 600; cursor: pointer;
+  box-sizing: border-box;
 }
-.presaBtn:hover:not(:disabled) { border-color: #555; color: #ccc; }
+.presaBtn:hover:not(:disabled) { border-color: #6a7494; color: #c0c8d8; }
 .presaBtn:disabled { opacity: 0.3; cursor: not-allowed; }
 .presaBtn.zoneBtnActive { background: #2a1e3a; border-color: #ab47bc; color: #ab47bc; border-style: solid; }
 .presaBtn.zoneBtnContra { background: #2a2210; border-color: #f5c518; color: #f5c518; border-style: solid; }
 
 .modeColumn {
-  display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
-  padding-top: 0.1rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+  flex: 1; min-width: 0; max-width: 220px;
 }
 
 .modePill {
-  padding: 0.3rem 0.7rem; background: #161616; border: 1px solid #2a2a2a;
-  border-radius: 14px; color: #666; font-size: 0.75rem; font-weight: 600;
+  width: 100%;
+  padding: 0.2rem 0.5rem; background: #111640; border: 1px solid #242a5a;
+  border-radius: 12px; color: #9098b0; font-size: 0.72rem; font-weight: 600;
   cursor: pointer; white-space: nowrap; transition: background 0.1s, color 0.1s, border-color 0.1s;
+  text-align: center;
 }
-.modePill:hover { border-color: #555; color: #bbb; }
-.modePillActive { background: #1e3a4a; border-color: #00bcd4; color: #fff; }
+.modePill:hover { border-color: #6a7494; color: #c0c8d8; }
+.modePillActive { background: #2a2210; border-color: #c8a55a; color: #fff; }
+.modePillRed { background: #3a1e1e; border-color: #ef5350; color: #ef5350; }
+.modePillBlue { background: #1a2a3a; border-color: #42a5f5; color: #42a5f5; }
 
-.contraTag { font-size: 0.68rem; color: #f5c518; text-align: center; }
+.narrationWrap {
+  min-height: 1.8em;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0.1rem 0;
+}
 
-/* ── Penalty toggles ─────────────────────────────────────────────────────── */
-.exchPenRow { display: flex; gap: 1.25rem; flex-wrap: wrap; padding-top: 0.25rem; }
+.contraTag {
+  font-size: 0.68rem; font-weight: 600; color: #c8a55a; text-align: center;
+  line-height: 1.3; word-break: break-word;
+}
 
-.penToggle { display: flex; align-items: center; gap: 0.4rem; }
-.penLabel  { font-size: 0.8rem; font-weight: 700; min-width: 70px; }
+/* -- Penalty toggles ------------------------------------------------------ */
+.exchPenRow { display: flex; gap: 0.75rem; flex-wrap: wrap; padding-top: 0.1rem; }
 
-.penOpts { display: flex; gap: 0.25rem; }
+.penToggle { display: flex; align-items: center; gap: 0.3rem; }
+.penLabel  { font-size: 0.68rem; font-weight: 700; min-width: 55px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.penOpts { display: flex; gap: 0.15rem; }
 .penOpt {
-  padding: 0.25rem 0.55rem; background: #1a1a1a; border: 1px solid #2a2a2a;
-  border-radius: 4px; color: #555; font-size: 0.78rem; font-weight: 700;
+  padding: 0.12rem 0.4rem; background: #161c4a; border: 1px solid #242a5a;
+  border-radius: 4px; color: #9098b0; font-size: 0.68rem; font-weight: 700;
   cursor: pointer; transition: background 0.1s, color 0.1s;
 }
-.penOpt:hover { background: #222; color: #aaa; }
+.penOpt:hover { background: #1e2455; color: #a8b0c0; }
 .penOptWarn   { background: #2a2a1a; border-color: #888830; color: #cccc55; }
 .penOptYellow { background: #3a2e00; border-color: #f5c518; color: #f5c518; }
+.penOptRed    { background: #3a1010; border-color: #ef5350; color: #ef5350; }
 
-/* ── Difference row ──────────────────────────────────────────────────────── */
+/* -- Difference row ------------------------------------------------------- */
 .diffRow {
-  display: flex; align-items: center; gap: 0.5rem;
-  padding: 0.35rem 0.5rem; background: #0d0d0d; border-radius: 5px;
-  font-size: 0.9rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.15rem 0.5rem; background: #0a0f30; border-radius: 4px;
+  font-size: 0.78rem; font-weight: 700; font-variant-numeric: tabular-nums;
 }
-.diffLabel { font-size: 0.75rem; color: #555; margin-right: 0.25rem; }
+.diffLabel { font-size: 0.65rem; color: #8890b0; margin-right: 0.2rem; }
 
 .redPos   { color: #ef5350; }
-.redNeg   { color: #ef535088; }
+.redNeg   { color: #e08080; }
 .bluePos  { color: #42a5f5; }
-.blueNeg  { color: #42a5f588; }
-.neutral  { color: #555; }
+.blueNeg  { color: #80b0d8; }
+.neutral  { color: #6a7494; }
 
-.invalidTag { font-size: 0.8rem; color: #f5c518; font-style: italic; }
+.invalidTag { font-size: 0.75rem; color: #f5c518; font-style: italic; }
 
-/* ── Final row ───────────────────────────────────────────────────────────── */
+/* -- Final row ------------------------------------------------------------ */
 .finalRow {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0.6rem 0.5rem; margin-top: 0.25rem;
-  border-top: 1px solid #222; font-size: 1.1rem;
+  padding: 0.35rem 0.75rem; margin-top: 0.15rem;
+  background: #111640; border: 1px solid #1e2455; border-radius: 6px;
+  font-size: 1rem; flex-shrink: 0;
 }
-.finalLabel { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #666; }
+.finalLabel { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #6a7494; }
 
-/* ── Confirm / back buttons ──────────────────────────────────────────────── */
+/* -- Toolbar (weapon + reset) --------------------------------------------- */
+.toolBar {
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.toolBar > *:first-child { flex: 1; min-width: 0; }
+
+.resetBtn {
+  padding: 0.25rem 0.65rem; background: #2a1e1e; border: 1px solid #6a3030;
+  border-radius: 5px; color: #ef5350; font-size: 0.72rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: background 0.12s;
+}
+.resetBtn:hover { background: #3a2525; border-color: #ef5350; }
+
+/* -- Depletion / expulsion banners ---------------------------------------- */
+.depletionBanner {
+  padding: 0.4rem 0.75rem; background: #1a2a10; border: 1px solid #c8a55a;
+  border-radius: 6px; color: #c8a55a; font-size: 0.82rem; font-weight: 700;
+  text-align: center; flex-shrink: 0;
+}
+
+/* -- Confirm / back buttons ----------------------------------------------- */
+.expulsionBanner {
+  padding: 0.4rem 0.75rem; background: #3a1010; border: 1px solid #ef5350;
+  border-radius: 6px; color: #ef5350; font-size: 0.82rem; font-weight: 700;
+  text-align: center; flex-shrink: 0;
+}
+
 .confirmBtn {
-  padding: 0.75rem 1.5rem; background: #1a3a1a; border: 1px solid #66bb6a;
-  border-radius: 8px; color: #66bb6a; font-size: 1rem; font-weight: 700;
-  cursor: pointer; transition: background 0.15s;
+  padding: 0.75rem 2rem; background: #1a3a1a; border: 1px solid #66bb6a;
+  border-radius: 6px; color: #66bb6a; font-size: 0.88rem; font-weight: 700;
+  cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+  align-self: center;
 }
 .confirmBtn:hover:not(:disabled) { background: #1e4a1e; }
 .confirmBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* -- Disarm picker -------------------------------------------------------- */
+.disarmPicker {
+  display: flex; gap: 0.25rem; width: 100%;
+}
+.disarmBtn {
+  flex: 1; padding: 0.2rem 0.3rem;
+  background: #161c4a; border: 1px solid #242a5a; border-radius: 5px;
+  color: #6a7494; font-size: 0.68rem; font-weight: 700;
+  cursor: pointer; transition: background 0.1s, border-color 0.1s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.disarmBtn:hover { border-color: #6a7494; color: #c0c8d8; }
+.disarmBtnActiveRed  { background: #3a1e1e; border-color: #ef5350; color: #ef5350; }
+.disarmBtnActiveBlue { background: #1a2a3a; border-color: #42a5f5; color: #42a5f5; }

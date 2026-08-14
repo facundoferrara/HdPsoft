@@ -1,126 +1,193 @@
-import { useState, useEffect, useMemo } from 'react'
-import { onSnapshot, query, where } from 'firebase/firestore'
-import { matchesRef } from '../firebase/db'
-import ArenaStatus from '../components/display/ArenaStatus'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import Leaderboard from '../components/display/Leaderboard'
-import BreakCountdown from '../components/display/BreakCountdown'
 import Carousel from '../components/display/Carousel'
 import PairedStats from '../components/display/PairedStats'
+import TopTenGrid from '../components/display/TopTenGrid'
 import { useEventStatus } from '../hooks/useEventStatus'
 import { useLeaderboard } from '../hooks/useLeaderboard'
 import styles from './Display.module.css'
 
 const fmt = (v) => v.toFixed(2)
+const pct = (v) => `${Math.round(v * 100)}%`
+
+function buildTriads(entries) {
+  const mc = (e) => e.matches_complete ?? 1
+  return [
+    {
+      left: {
+        title: 'Cabeza',
+        subtitle: 'Golpes limpios / asalto',
+        entries: entries.map((e) => ({ ...e, value: (e.clean_head_hits ?? 0) / mc(e), total: e.clean_head_hits ?? 0 })),
+        format: fmt,
+        formatSecondary: (e) => `(${e.total})`,
+      },
+      center: {
+        title: 'Cuerpo',
+        subtitle: 'Golpes limpios / asalto',
+        entries: entries.map((e) => ({ ...e, value: (e.clean_body_hits ?? 0) / mc(e), total: e.clean_body_hits ?? 0 })),
+        format: fmt,
+        formatSecondary: (e) => `(${e.total})`,
+      },
+      right: {
+        title: 'Manos',
+        subtitle: 'Golpes limpios / asalto',
+        entries: entries.map((e) => ({ ...e, value: (e.clean_hand_hits ?? 0) / mc(e), total: e.clean_hand_hits ?? 0 })),
+        format: fmt,
+        formatSecondary: (e) => `(${e.total})`,
+      },
+    },
+    {
+      left: {
+        title: 'Pericia Defensiva',
+        subtitle: 'Puntos iniciales defendidos',
+        entries: entries.map((e) => ({
+          ...e,
+          value: Math.max(0, Math.min(1, 1 - (e.points_lost_defense ?? 0) / mc(e) / 5)),
+        })),
+        format: pct,
+      },
+      center: {
+        title: 'Prolijidad Ofensiva',
+        subtitle: 'Intercambios ganados limpiamente',
+        entries: entries.map((e) => {
+          const total = e.total_valid_exchanges ?? 0
+          return { ...e, value: total > 0 ? (e.clean_exchanges_won ?? 0) / total : 0 }
+        }),
+        format: pct,
+      },
+      right: {
+        title: 'Pulcritud',
+        subtitle: 'Intercambios sin dobles',
+        entries: entries.map((e) => ({
+          ...e,
+          value: Math.max(0, 1 - (e.double_hit_count ?? 0) / mc(e) / 3),
+        })),
+        format: pct,
+      },
+    },
+    {
+      left: {
+        title: 'Puntos Recuperados',
+        subtitle: 'Via contrapaso / asalto',
+        entries: entries.map((e) => ({ ...e, value: (e.points_rescued_contrapaso ?? 0) / mc(e), total: e.points_rescued_contrapaso ?? 0 })),
+        format: fmt,
+        formatSecondary: (e) => `(${e.total})`,
+      },
+      center: {
+        title: 'Contrapasos',
+        subtitle: 'Exitosos / asalto',
+        entries: entries.map((e) => ({ ...e, value: (e.contrapaso_count ?? 0) / mc(e), total: e.contrapaso_count ?? 0 })),
+        format: fmt,
+        formatSecondary: (e) => `(${e.total})`,
+      },
+      right: {
+        title: 'Golpes Limpios',
+        subtitle: 'Total promedio / asalto',
+        entries: entries.map((e) => ({
+          ...e,
+          value: ((e.clean_hand_hits ?? 0) + (e.clean_body_hits ?? 0) + (e.clean_head_hits ?? 0)) / mc(e),
+          total: (e.clean_hand_hits ?? 0) + (e.clean_body_hits ?? 0) + (e.clean_head_hits ?? 0),
+        })),
+        format: fmt,
+        formatSecondary: (e) => `(${e.total})`,
+      },
+    },
+  ]
+}
+
+function BreakBanner({ eventStatus }) {
+  const isBreak = eventStatus?.status === 'break'
+  const breakEndsAt = eventStatus?.break_ends_at
+  const [remaining, setRemaining] = useState(null)
+
+  useEffect(() => {
+    if (!breakEndsAt) { setRemaining(null); return }
+    const tick = () => setRemaining(Math.max(0, breakEndsAt.toMillis() - Date.now()))
+    tick()
+    const id = setInterval(tick, 500)
+    return () => clearInterval(id)
+  }, [breakEndsAt])
+
+  if (!isBreak) return null
+
+  const hasClock = breakEndsAt && remaining != null && remaining > 0
+  const totalSec = hasClock ? Math.ceil(remaining / 1000) : 0
+  const mm = Math.floor(totalSec / 60)
+  const ss = String(totalSec % 60).padStart(2, '0')
+
+  return (
+    <div className={styles.breakBanner}>
+      <span className={styles.breakIcon}>⏸</span>
+      <span className={styles.breakText}>{hasClock ? 'Próxima ronda en' : 'Evento en pausa'}</span>
+      {hasClock && <span className={styles.breakTimer}>{mm}:{ss}</span>}
+    </div>
+  )
+}
 
 export default function Display() {
   const { eventStatus, loading } = useEventStatus()
   const { leaderboard } = useLeaderboard()
+  const [summaryMode, setSummaryMode] = useState(false)
 
-  const [activeMatches, setActiveMatches] = useState([])
-  useEffect(() => {
-    const q = query(matchesRef, where('status', '==', 'active'))
-    return onSnapshot(q, (snap) => {
-      setActiveMatches(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-    })
-  }, [])
-
-  const isBreak = eventStatus?.status === 'break'
   const isFinished = eventStatus?.status === 'finished'
-  const hasActiveArenas = activeMatches.some((m) => m.arena != null)
-  const showArenas = hasActiveArenas && !isBreak
 
+  const MIN_MATCHES = 4
   const withMatches = useMemo(
-    () => leaderboard.filter((e) => (e.matches_complete ?? 0) > 0),
+    () => leaderboard
+      .filter((e) => (e.matches_complete ?? 0) > 0)
+      .map((e) => ({ ...e, qualified: (e.matches_complete ?? 0) >= MIN_MATCHES })),
     [leaderboard],
   )
 
-  const statPairs = useMemo(() => {
-    const mc = (e) => e.matches_complete ?? 1
+  const top10 = useMemo(
+    () => leaderboard.slice(0, 10).filter((e) => (e.matches_complete ?? 0) > 0),
+    [leaderboard],
+  )
 
-    return [
-      {
-        left: {
-          title: 'Golpes a las Manos',
-          subtitle: 'Promedio por asalto',
-          entries: withMatches.map((e) => ({ ...e, value: (e.hand_hits_landed ?? 0) / mc(e) })),
-          format: fmt,
-        },
-        right: {
-          title: 'Golpes a la Cabeza',
-          subtitle: 'Golpes limpios promedio por asalto',
-          entries: withMatches.map((e) => ({ ...e, value: (e.clean_head_hits ?? 0) / mc(e) })),
-          format: fmt,
-        },
-      },
-      {
-        left: {
-          title: 'Pericia Defensiva',
-          subtitle: 'Promedio de puntos iniciales defendidos',
-          entries: withMatches.map((e) => ({
-            ...e,
-            value: Math.max(0, Math.min(5, 5 - (e.points_lost_defense ?? 0) / mc(e))),
-          })),
-          format: fmt,
-        },
-        right: {
-          title: 'Prolijidad Ofensiva',
-          subtitle: 'Proporción de intercambios sin dobles',
-          entries: withMatches.map((e) => {
-            const doubles = (e.double_hit_count ?? 0) / mc(e)
-            return { ...e, value: Math.max(0, 1 - doubles / 3) }
-          }),
-          format: (v) => `${Math.round(v * 100)}%`,
-        },
-      },
-      {
-        left: {
-          title: 'Puntos Rescatados',
-          subtitle: 'Puntos recuperados por contrapaso / asalto',
-          entries: withMatches.map((e) => ({ ...e, value: (e.points_rescued_contrapaso ?? 0) / mc(e) })),
-          format: fmt,
-        },
-        right: {
-          title: 'Contrapasos',
-          subtitle: 'Ejecuciones promedio por asalto',
-          entries: withMatches.map((e) => ({ ...e, value: (e.contrapaso_count ?? 0) / mc(e) })),
-          format: fmt,
-        },
-      },
-    ]
-  }, [withMatches])
+  const statTriads = useMemo(() => buildTriads(withMatches), [withMatches])
+
+  const handleCycleComplete = useCallback(() => {
+    setSummaryMode((prev) => !prev)
+  }, [])
 
   if (loading) return <div className={styles.loading}>Conectando…</div>
 
   return (
     <div className={styles.page}>
-      {isBreak && (
-        <div className={styles.breakOverlay}>
-          <BreakCountdown breakEndsAt={eventStatus.break_ends_at} />
-        </div>
-      )}
 
       {isFinished && (
         <div className={styles.finishedBanner}>Torneo finalizado</div>
       )}
 
-      {showArenas && (
-        <div className={styles.arenaBanner}>
-          <ArenaStatus matches={activeMatches} />
+      {summaryMode ? (
+        <div className={styles.summaryLayout}>
+          <div className={styles.summaryHeader}>
+            <h2 className={styles.summaryTitle}>Top 10</h2>
+          </div>
+          <div className={styles.summaryContent}>
+            <Carousel intervalMs={30000} onCycleComplete={handleCycleComplete}>
+              {statTriads.map((triad, i) => (
+                <TopTenGrid key={i} top10={top10} triad={triad} />
+              ))}
+            </Carousel>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.columns}>
+          <section className={styles.left}>
+            <Leaderboard />
+          </section>
+          <section className={styles.right}>
+            <Carousel intervalMs={30000} onCycleComplete={handleCycleComplete}>
+              {statTriads.map((triad, i) => (
+                <PairedStats key={i} left={triad.left} center={triad.center} right={triad.right} />
+              ))}
+            </Carousel>
+          </section>
         </div>
       )}
 
-      <div className={styles.columns} style={showArenas ? { height: 'calc(100vh - 6vh)' } : undefined}>
-        <section className={styles.left}>
-          <Leaderboard />
-        </section>
-        <section className={styles.right}>
-          <Carousel intervalMs={15000}>
-            {statPairs.map((pair, i) => (
-              <PairedStats key={i} left={pair.left} right={pair.right} />
-            ))}
-          </Carousel>
-        </section>
-      </div>
+      <BreakBanner eventStatus={eventStatus} />
     </div>
   )
 }

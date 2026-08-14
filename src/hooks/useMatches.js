@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { onSnapshot, query, where, orderBy } from 'firebase/firestore'
 import { matchesRef } from '../firebase/db'
 
-/** Asaltos de una ronda específica, ordenados por match_number */
+/** Asaltos de una ronda específica — numerados primero (por match_number), sin numerar al final */
 export function useRoundMatches(roundId) {
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
@@ -13,9 +13,15 @@ export function useRoundMatches(roundId) {
       setLoading(false)
       return
     }
-    const q = query(matchesRef, where('round_id', '==', roundId), orderBy('match_number'))
+    const q = query(matchesRef, where('round_id', '==', roundId))
     const unsub = onSnapshot(q, (snap) => {
-      setMatches(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      docs.sort((a, b) => {
+        const an = a.match_number ?? Infinity
+        const bn = b.match_number ?? Infinity
+        return an - bn
+      })
+      setMatches(docs)
       setLoading(false)
     })
     return unsub

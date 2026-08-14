@@ -3,7 +3,7 @@
   min-width: 200px;
   border-radius: 10px;
   padding: 1rem;
-  border: 2px dashed #333;
+  border: 2px dashed #2a3065;
   transition: border-color 0.15s, background 0.15s;
   min-height: 110px;
   display: flex;
@@ -12,37 +12,37 @@
 }
 
 .empty {
-  background: #111;
+  background: #0e1338;
   border-style: dashed;
 }
 
 .occupied {
-  background: #0a1e2a;
-  border-color: #00bcd4;
+  background: #1a1840;
+  border-color: #c8a55a;
   border-style: solid;
 }
 
 .over {
-  background: #0e2535;
-  border-color: #4dd0e1;
+  background: #1e2050;
+  border-color: #d4b36a;
 }
 
 .label {
-  font-size: 0.78rem;
+  font-size: 0.9rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: #666;
+  color: #6a7494;
 }
 
-.occupied .label { color: #00bcd4; }
+.occupied .label { color: #c8a55a; }
 
 .matchInfo { display: flex; flex-direction: column; gap: 0.25rem; }
 
 .tier {
   font-size: 0.7rem;
   font-weight: 700;
-  color: #00bcd4;
+  color: #c8a55a;
   letter-spacing: 0.08em;
 }
 
@@ -53,12 +53,12 @@
   flex-wrap: wrap;
 }
 
-.red { color: #ef5350; font-weight: 600; font-size: 0.9rem; }
-.blue { color: #42a5f5; font-weight: 600; font-size: 0.9rem; }
-.vs { color: #444; font-size: 0.75rem; }
+.red { color: #ef5350; font-weight: 600; font-size: 1rem; }
+.blue { color: #42a5f5; font-weight: 600; font-size: 1rem; }
+.vs { color: #6a7494; font-size: 0.85rem; }
 
 .placeholder {
-  color: #444;
+  color: #7880a0;
   font-size: 0.85rem;
   font-style: italic;
   margin-top: auto;
@@ -66,14 +66,14 @@
 
 .control {
   font-size: 0.72rem;
-  color: #7a8a90;
-  border-top: 1px solid #163040;
+  color: #7880a0;
+  border-top: 1px solid #1e2455;
   padding-top: 0.3rem;
   margin-top: 0.15rem;
 }
 
 .clickable { cursor: pointer; }
-.clickable:hover { border-color: #4dd0e1; }
+.clickable:hover { border-color: #d4b36a; }
 
 .assignable {
   cursor: pointer;

@@ -13,9 +13,10 @@
 
 .progressFill {
   height: 100%;
-  background: linear-gradient(90deg, #c8a55a, #6ab7d4);
-  transition: width 0.05s linear;
+  background: linear-gradient(90deg, #c0c8d8, #c8a55a, #c0c8d8);
+  transition: transform 0.05s linear;
   box-shadow: 0 0 8px rgba(200, 165, 90, 0.3);
+  transform-origin: center;
 }
 
 .slideContainer {

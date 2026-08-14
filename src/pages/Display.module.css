@@ -1,17 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Caudex:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display&display=swap');
 
 .page {
-  min-height: 100vh;
-  background: #0b1929;
+  height: 100vh;
+  background: #0c1133;
   color: #d8dce6;
-  position: relative;
   font-family: 'Caudex', Georgia, serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .columns {
   display: grid;
   grid-template-columns: 3fr 5fr;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
 }
 
 .left {
@@ -27,31 +30,77 @@
   overflow: hidden;
 }
 
-.arenaBanner {
+.summaryLayout {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  gap: 1px;
-  background: rgba(255, 255, 255, 0.06);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-direction: column;
+}
+
+.summaryHeader {
+  text-align: center;
+  padding: 2vh 0 0.5vh;
   flex-shrink: 0;
 }
 
-.breakOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(11, 25, 41, 0.92);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
+.summaryTitle {
+  font-family: 'DM Serif Display', serif;
+  font-size: 4vh;
+  font-weight: 400;
+  color: #c8a55a;
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+.summaryContent {
+  flex: 1;
+  overflow: hidden;
 }
 
 .finishedBanner {
+  flex-shrink: 0;
   background: #122a1a;
   color: #7ecf8e;
   text-align: center;
   padding: 0.75rem;
   font-family: 'DM Serif Display', serif;
   font-size: 1.5rem;
+  letter-spacing: 0.05em;
+}
+
+.breakBanner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2vw;
+  padding: 1.2vh 2vw;
+  background: rgba(26, 20, 0, 0.95);
+  border-top: 1px solid #3a2800;
+  animation: bannerSlideUp 0.4s ease-out;
+}
+
+@keyframes bannerSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.breakIcon {
+  font-size: 2.5vh;
+}
+
+.breakText {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.5vh;
+  color: #f5a623;
+  letter-spacing: 0.04em;
+}
+
+.breakTimer {
+  font-size: 3.5vh;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #f5a623;
   letter-spacing: 0.05em;
 }
 
@@ -62,5 +111,5 @@
   height: 100vh;
   font-family: 'DM Serif Display', serif;
   font-size: 1.5rem;
-  color: #4a6a8a;
+  color: #4a5478;
 }

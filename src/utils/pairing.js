@@ -67,6 +67,9 @@ export function generatePairings(fighters, pastPairs) {
   // Segunda pasada — swap anti-mismo-club (opción C)
   applyClubSwaps(pairs, pastPairs)
 
+  // Reordenar para que los primeros 3 asaltos usen personas distintas
+  optimizeMatchOrder(pairs, 3)
+
   // Tirador sin pareja
   const byeFighter = pool.find((f) => !used.has(f.id)) ?? null
   const byeFighterId = selectByeFighter(byeFighter, pool, pairs, used)
@@ -117,6 +120,39 @@ function selectByeFighter(naturalCandidate, pool, pairs, used) {
     .find((f) => !used.has(f.id) && f.bye_count === 0)
 
   return (topCandidate ?? naturalCandidate).id
+}
+
+/**
+ * Reordena pairs in-place para que los primeros `arenaCount` asaltos
+ * no compartan ningún tirador, permitiendo arrancar todas las arenas juntas.
+ */
+function optimizeMatchOrder(pairs, arenaCount) {
+  if (pairs.length <= 1) return
+  const slots = Math.min(arenaCount, pairs.length)
+  const selected = [0]
+  const usedIds = new Set([pairs[0].red.id, pairs[0].blue.id])
+
+  for (let slot = 1; slot < slots; slot++) {
+    let best = -1
+    for (let i = slot; i < pairs.length; i++) {
+      if (selected.includes(i)) continue
+      const p = pairs[i]
+      if (!usedIds.has(p.red.id) && !usedIds.has(p.blue.id)) {
+        best = i
+        break
+      }
+    }
+    if (best === -1) break
+    // Swap into slot position
+    if (best !== slot) {
+      const tmp = pairs[slot]
+      pairs[slot] = pairs[best]
+      pairs[best] = tmp
+    }
+    selected.push(slot)
+    usedIds.add(pairs[slot].red.id)
+    usedIds.add(pairs[slot].blue.id)
+  }
 }
 
 /** Genera una clave canónica para un par, siempre con el id menor primero. */

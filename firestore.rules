@@ -14,9 +14,8 @@ service cloud.firestore {
       allow read: if true;
       // Creación y borrado permitidos (operaciones de padrón pre-evento via seed/import)
       allow create, delete: if true;
-      // Solo se permiten updates al gear (tier, weapon) — no edición de identidad desde cliente
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
-                       .hasOnly(['tier']);
+                       .hasOnly(['tier', 'name', 'club', 'role', 'status']);
     }
 
     // ── Rounds ───────────────────────────────────────────────────────────────
@@ -25,7 +24,7 @@ service cloud.firestore {
       allow create: if isValidRound(request.resource.data);
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['status', 'completed_at']);
-      allow delete: if false;
+      allow delete: if true;
     }
 
     // ── Matches ──────────────────────────────────────────────────────────────
@@ -33,13 +32,13 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isValidMatch(request.resource.data);
       allow update: if isValidMatchUpdate(request.resource.data, resource.data);
-      allow delete: if false;
+      allow delete: if true;
 
       // Exchanges (subcollección — solo append, no borrado)
       match /exchanges/{exchangeId} {
         allow read: if true;
         allow create: if isValidExchange(request.resource.data);
-        allow update, delete: if false;
+        allow update, delete: if true;
       }
     }
 
@@ -51,17 +50,22 @@ service cloud.firestore {
       // Solo se permite update incremental de campos numéricos
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['total_points', 'matches_complete', 'bye_count', 'points_lost_defense',
-                                 'clean_head_hits', 'points_rescued_contrapaso', 'contrapaso_count',
+                                 'clean_hand_hits', 'clean_body_hits', 'clean_head_hits',
+                                 'points_rescued_contrapaso', 'contrapaso_count',
+                                 'clean_exchanges_won', 'total_valid_exchanges',
                                  'wins_espada_larga',
                                  'matches_won', 'matches_lost', 'matches_drawn',
-                                 'hand_hits_landed', 'double_hit_count']);
+                                 'hand_hits_landed', 'double_hit_count',
+                                 'name', 'club']);
     }
 
     // ── Byes ─────────────────────────────────────────────────────────────────
     match /byes/{byeId} {
       allow read: if true;
       allow create: if request.resource.data.keys().hasAll(['fighter_id', 'round_id', 'calibration_points']);
-      allow update, delete: if false;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['calibration_points']);
+      allow delete: if true;
     }
 
     // ── Control stats (contadores acumulados de árbitro/juez, todo el evento) ──
@@ -70,7 +74,7 @@ service cloud.firestore {
       allow create: if request.resource.data.keys().hasOnly(['referee_count', 'judge_count']);
       allow update: if request.resource.data.diff(resource.data).affectedKeys()
                        .hasOnly(['referee_count', 'judge_count']);
-      allow delete: if false;
+      allow delete: if true;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -91,16 +95,17 @@ service cloud.firestore {
     function isValidMatchUpdate(newData, oldData) {
       let changed = newData.diff(oldData).affectedKeys();
       // Activación: asignar arena
-      let activationKeys = ['status', 'arena', 'activated_at'].toSet();
+      let activationKeys = ['status', 'arena', 'activated_at', 'match_number'].toSet();
       // Cierre: resultado final (incluye override de mesa)
       let completionKeys = ['status', 'final_score_red', 'final_score_blue', 'winner_id',
                             'ended_early', 'ended_by_depletion',
+                            'ended_by_red_card', 'red_carded_fighter', 'calibration_pending', 'calibration_score',
                             'override', 'override_note', 'overridden_at'].toSet();
       // Cancelación
       let cancellationKeys = ['status'].toSet();
       // Control body update
       let controlBodyKeys = ['referee_id', 'judge_1_id', 'judge_2_id',
-                              'same_club_warning', 'fairness_warning', 'role_mismatch_warning',
+                              'same_club_warning', 'fairness_warning',
                               'rerolled'].toSet();
       // Arma acordada del asalto
       let weaponKeys = ['weapon'].toSet();

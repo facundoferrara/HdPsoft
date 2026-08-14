@@ -1,18 +1,39 @@
 .page { display: flex; flex-direction: column; gap: 1rem; }
-.title { font-size: 1rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin: 0; }
-.loading, .empty { color: #666; padding: 1rem 0; font-size: 0.9rem; }
+.title { font-size: 1rem; font-weight: 700; color: #a8b0c0; text-transform: uppercase; letter-spacing: 0.05em; margin: 0; }
+.loading, .empty { color: #6a7494; padding: 1rem 0; font-size: 0.9rem; }
 
 .table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 .table th {
   text-align: left;
   padding: 0.4rem 0.75rem;
-  border-bottom: 1px solid #2a2a2a;
-  color: #666;
+  border-bottom: 1px solid #242a5a;
+  color: #6a7494;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-.table td { padding: 0.45rem 0.75rem; border-bottom: 1px solid #1e1e1e; }
+.table td { padding: 0.45rem 0.75rem; border-bottom: 1px solid #1a2050; }
 .rowRed td { background: #1a0a0a; }
 .yellow { color: #f5a623; font-weight: 700; }
 .red { color: #ef5350; font-weight: 700; }
+.rowDisqualified td { opacity: 0.5; }
+
+.dqBtn {
+  padding: 0.25rem 0.6rem;
+  background: #2a0a0a;
+  border: 1px solid #6a2a2a;
+  border-radius: 4px;
+  color: #e08080;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.dqBtn:hover { background: #3a1414; border-color: #8a3a3a; color: #f5a0a0; }
+
+.dqBadge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #ef5350;
+  letter-spacing: 0.04em;
+}

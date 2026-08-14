@@ -8,8 +8,7 @@ import { useLeaderboard } from '../../hooks/useLeaderboard'
 import { useControlStats } from '../../hooks/useControlStats'
 import { generatePairings, pairKey } from '../../utils/pairing'
 import { assignControlBody, getCandidatesForReroll } from '../../utils/controlBody'
-import { generateRound, activateMatch, deactivateMatch, updateMatchWeapon, updateMatchControlBody, registerBye, cancelRound } from '../../firebase/writes'
-import { calcCalibrationPoints } from '../../utils/scoring'
+import { generateRound, activateMatch, deactivateMatch, updateMatchWeapon, updateMatchControlBody, registerBye, cancelRound, closeRound } from '../../firebase/writes'
 import { matchesRef } from '../../firebase/db'
 import ArenaDropZone from './ArenaDropZone'
 import MatchCard from './MatchCard'
@@ -49,6 +48,11 @@ export default function Scheduler({ onRoundComplete }) {
       .flatMap((m) => [m.fighter_red_id, m.fighter_blue_id, m.referee_id, m.judge_1_id, m.judge_2_id])
   )
 
+  const nextMatchNumber = () => {
+    const assigned = matches.filter((m) => m.match_number != null)
+    return assigned.length > 0 ? Math.max(...assigned.map((m) => m.match_number)) + 1 : 1
+  }
+
   const isBlocked = (match) =>
     match.status === 'pending' &&
     [match.fighter_red_id, match.fighter_blue_id, match.referee_id, match.judge_1_id, match.judge_2_id]
@@ -73,7 +77,7 @@ export default function Scheduler({ onRoundComplete }) {
     const match = matches.find((m) => m.id === matchId)
     if (!match || match.status !== 'pending' || isBlocked(match)) return
     if (activeMatchByArena(arena)) return // arena ya ocupada — evita pisar un asalto activo
-    await activateMatch(matchId, arena)
+    await activateMatch(matchId, arena, nextMatchNumber())
   }
 
   async function handleDeactivate(matchId) {
@@ -104,7 +108,7 @@ export default function Scheduler({ onRoundComplete }) {
     const match = matches.find((m) => m.id === selectedMatchId)
     setSelectedMatchId(null)
     if (!match || match.status !== 'pending' || isBlocked(match)) return
-    await activateMatch(selectedMatchId, arena)
+    await activateMatch(selectedMatchId, arena, nextMatchNumber())
   }
 
   // ── Generación de ronda ────────────────────────────────────────────────────
@@ -159,15 +163,9 @@ export default function Scheduler({ onRoundComplete }) {
 
       const roundId = await generateRound(nextRoundNumber, enrichedPairs)
 
-      // Registrar bye si el algoritmo asignó uno
+      // Registrar bye — calibración diferida a cierre de ronda (applyCalibration)
       if (byeFighterId) {
-        // Calibration = promedio de puntos finales de la ronda que acaba de cerrar (prevRoundId)
-        const lastRoundPoints = completedSnap.docs
-          .filter((d) => d.data().round_id === prevRoundId)
-          .flatMap((d) => [d.data().final_score_red, d.data().final_score_blue])
-          .filter((v) => typeof v === 'number')
-        const calibrationPts = calcCalibrationPoints(lastRoundPoints)
-        await registerBye(byeFighterId, roundId, calibrationPts)
+        await registerBye(byeFighterId, roundId, null)
       }
     } finally {
       setGenerating(false)
@@ -215,7 +213,6 @@ export default function Scheduler({ onRoundComplete }) {
       judge1Id: match.judge_1_id,
       judge2Id: match.judge_2_id,
       fairnessWarning: match.fairness_warning ?? false,
-      roleMismatchWarning: match.role_mismatch_warning ?? false,
     }
     next[roleField] = fighterId
     const redClub = fightersMap[match.fighter_red_id]?.club
@@ -254,7 +251,10 @@ export default function Scheduler({ onRoundComplete }) {
           </button>
         )}
         {allDone && matches.length > 0 && (
-          <button className={`${styles.generateBtn} ${styles.breakBtn}`} onClick={onRoundComplete}>
+          <button className={`${styles.generateBtn} ${styles.breakBtn}`} onClick={async () => {
+            await closeRound(currentRound.id)
+            onRoundComplete()
+          }}>
             Cerrar ronda → descanso
           </button>
         )}
@@ -290,7 +290,7 @@ export default function Scheduler({ onRoundComplete }) {
             <div className={styles.matchColumn}>
               <h3 className={styles.matchColumnTitle}>Asaltos de la ronda</h3>
               <div className={styles.matchGrid}>
-                {matches.map((match) => (
+                {matches.filter((m) => m.status !== 'complete' && m.status !== 'cancelled').map((match) => (
                   <MatchCard
                     key={match.id}
                     match={match}
@@ -306,6 +306,28 @@ export default function Scheduler({ onRoundComplete }) {
                   />
                 ))}
               </div>
+              {matches.some((m) => m.status === 'complete' || m.status === 'cancelled') && (
+                <>
+                  <div className={styles.completedSeparator}>Conclusos</div>
+                  <div className={styles.matchGrid}>
+                    {matches.filter((m) => m.status === 'complete' || m.status === 'cancelled').map((match) => (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        fightersMap={fightersMap}
+                        isBlocked={false}
+                        onReroll={handleReroll}
+                        candidates={[]}
+                        onAssignRole={handleAssignRole}
+                        onDeactivate={handleDeactivate}
+                        onUpdateWeapon={handleUpdateWeapon}
+                        onCardClick={handleCardClick}
+                        isSelected={false}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

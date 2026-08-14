@@ -12,11 +12,11 @@
 }
 
 .available {
-  background: #1a1a1a;
-  border-color: #333;
+  background: #161c4a;
+  border-color: #2a3065;
   cursor: grab;
 }
-.available:hover { border-color: #555; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+.available:hover { border-color: #4a5080; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
 
 .selected {
   border-color: #66bb6a;
@@ -24,14 +24,15 @@
 }
 
 .blocked {
-  background: #1a1200;
+  background: #1a1800;
   border-color: #4a3800;
   opacity: 0.85;
 }
 
 .active {
-  background: #0a1e2a;
-  border-color: #00bcd4;
+  background: #0d2a14;
+  border-color: #4caf50;
+  box-shadow: 0 0 8px rgba(76,175,80,0.25);
 }
 
 .complete {
@@ -55,10 +56,18 @@
   gap: 0.5rem;
 }
 
-.matchNum { font-size: 0.75rem; color: #666; font-weight: 600; }
+.matchNum {
+  font-size: 0.95rem;
+  color: #c0c8e0;
+  font-weight: 700;
+  background: rgba(255,255,255,0.08);
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
 
 .tier {
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -67,17 +76,31 @@
   border-radius: 3px;
 }
 
-.weaponLabel { font-size: 0.72rem; color: #777; font-style: italic; }
-.weaponInput {
-  background: #111;
-  border: 1px solid #2a2a2a;
+.weaponLabel { font-size: 0.72rem; color: #7880a0; font-style: italic; }
+
+.weaponSelect {
+  background: #0e1338;
+  border: 1px solid #242a5a;
   border-radius: 4px;
-  color: #ccc;
+  color: #c0c8d8;
+  padding: 0.1rem 0.3rem;
+  font-size: 0.72rem;
+  cursor: pointer;
+  max-width: 130px;
+}
+.weaponSelect:focus { outline: none; border-color: #4a5080; }
+
+.newWeaponRow { display: inline-flex; }
+.newWeaponInput {
+  background: #0e1338;
+  border: 1px solid #4a5080;
+  border-radius: 4px;
+  color: #c0c8d8;
   padding: 0.1rem 0.4rem;
   font-size: 0.72rem;
-  width: 90px;
+  width: 110px;
 }
-.weaponInput:focus { outline: none; border-color: #555; }
+.newWeaponInput:focus { outline: none; border-color: #6a7aaa; }
 
 .sameClub { font-size: 0.72rem; color: #f5a623; margin-left: auto; }
 .fairnessWarning { font-size: 0.72rem; color: #ce93d8; }
@@ -86,7 +109,7 @@
 .sameClub ~ .roleMismatch { margin-left: 0; }
 .fairnessWarning:first-child,
 .roleMismatch:first-child { margin-left: auto; }
-.rerolled { font-size: 0.75rem; color: #666; margin-left: auto; }
+.rerolled { font-size: 0.75rem; color: #6a7494; margin-left: auto; }
 
 .fighters { display: flex; flex-direction: column; gap: 0.2rem; }
 
@@ -96,27 +119,46 @@
   gap: 0.4rem;
 }
 
-.red { color: #ef5350; font-size: 0.7rem; }
-.blue { color: #42a5f5; font-size: 0.7rem; }
+.red { color: #ef5350; font-size: 0.8rem; }
+.blue { color: #42a5f5; font-size: 0.8rem; }
 
-.fighterName { font-size: 0.95rem; font-weight: 600; color: #eee; }
-.fighterSub { font-size: 0.72rem; color: #666; }
+.fighterName { font-size: 1.05rem; font-weight: 600; color: #e8ecf2; }
+.fighterSub { font-size: 0.8rem; color: #8890b0; }
 
-.vsRow { font-size: 0.72rem; color: #444; padding-left: 1rem; }
+.vsRow { font-size: 0.72rem; color: #6a7494; padding-left: 1rem; }
 
 .control {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.2rem 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
   font-size: 0.75rem;
-  color: #888;
-  border-top: 1px solid #222;
+  color: #8890a0;
+  border-top: 1px solid #1e2455;
   padding-top: 0.4rem;
 }
 
-.controlLabel { color: #555; }
-.controlSep { color: #444; }
-.controlName { color: #888; }
+.controlRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.controlLabel {
+  color: #8890b0;
+  min-width: 46px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.controlJudges {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.controlSep { color: #6a7494; }
+.controlName { color: #8890a0; }
 
 .controlSlot { position: relative; display: inline-block; }
 
@@ -124,12 +166,12 @@
   background: none;
   border: none;
   padding: 0;
-  color: #9ccdf5;
+  color: #c8a55a;
   font-size: 0.75rem;
   cursor: pointer;
   text-decoration: underline dotted;
 }
-.controlNameBtn:hover { color: #cfe8ff; }
+.controlNameBtn:hover { color: #d4b36a; }
 
 .controlBackdrop {
   position: fixed;
@@ -146,8 +188,8 @@
   min-width: 160px;
   max-height: 220px;
   overflow-y: auto;
-  background: #1e1e1e;
-  border: 1px solid #333;
+  background: #1a2050;
+  border: 1px solid #2a3065;
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.5);
   display: flex;
@@ -162,16 +204,16 @@
   background: none;
   border: none;
   padding: 0.35rem 0.5rem;
-  color: #e0e0e0;
+  color: #d8dce6;
   font-size: 0.8rem;
   text-align: left;
   cursor: pointer;
   border-radius: 4px;
 }
-.controlOption:hover { background: #2a2a2a; }
-.controlOptionClub { color: #666; font-size: 0.7rem; }
+.controlOption:hover { background: #242a5a; }
+.controlOptionClub { color: #6a7494; font-size: 0.7rem; }
 
-.controlEmpty { padding: 0.35rem 0.5rem; color: #555; font-size: 0.78rem; font-style: italic; }
+.controlEmpty { padding: 0.35rem 0.5rem; color: #8890b0; font-size: 0.78rem; font-style: italic; }
 
 .result {
   display: flex;
@@ -182,20 +224,20 @@
   justify-content: center;
 }
 
-.vs { color: #555; font-size: 0.85rem; }
+.vs { color: #6a7494; font-size: 0.85rem; }
 
 .rerollBtn {
-  align-self: flex-end;
+  align-self: center;
   padding: 0.2rem 0.6rem;
-  background: #1e1e1e;
-  border: 1px solid #333;
+  background: #1a2050;
+  border: 1px solid #2a3065;
   border-radius: 4px;
-  color: #888;
+  color: #8890a0;
   font-size: 0.75rem;
   cursor: pointer;
   transition: background 0.1s, color 0.1s;
 }
-.rerollBtn:hover { background: #2a2a2a; color: #ccc; }
+.rerollBtn:hover { background: #242a5a; color: #c0c8d8; }
 
 .deactivateBtn {
   align-self: flex-end;

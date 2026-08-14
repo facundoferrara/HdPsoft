@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useFighters } from '../../hooks/useFighters'
-import { updateFighterGear, addStaffMember } from '../../firebase/writes'
+import { updateFighterGear, updateFighterInfo, updateFighterStatus, addStaffMember, deleteFighter } from '../../firebase/writes'
 import styles from './GearCheck.module.css'
 
 const TIERS = ['tbd', 'boffer', 'nylon', 'acero', 'na']
@@ -26,9 +26,11 @@ export default function GearCheck() {
   }, {})
 
   const counts = {
-    active: fighters.filter((f) => !['tbd', 'na'].includes(f.tier)).length,
+    active: fighters.filter((f) => !['tbd', 'na'].includes(f.tier) && f.status !== 'paused' && f.status !== 'disqualified').length,
     tbd: fighters.filter((f) => f.tier === 'tbd').length,
     na: fighters.filter((f) => f.tier === 'na').length,
+    paused: fighters.filter((f) => f.status === 'paused').length,
+    disqualified: fighters.filter((f) => f.status === 'disqualified').length,
   }
 
   async function handleTierChange(fighter, tier) {
@@ -52,6 +54,8 @@ export default function GearCheck() {
       <div className={styles.summary}>
         <span className={styles.chip}>✓ {counts.active} acreditados</span>
         {counts.tbd > 0 && <span className={`${styles.chip} ${styles.chipPending}`}>⏳ {counts.tbd} pendientes</span>}
+        {counts.paused > 0 && <span className={`${styles.chip} ${styles.chipPaused}`}>⏸ {counts.paused} pausados</span>}
+        {counts.disqualified > 0 && <span className={`${styles.chip} ${styles.chipDq}`}>✕ {counts.disqualified} descalificados</span>}
         {counts.na > 0 && <span className={`${styles.chip} ${styles.chipAbsent}`}>👥 {counts.na} staff/no compite</span>}
         <button className={styles.addStaffBtn} onClick={() => setShowAddStaff((v) => !v)}>
           {showAddStaff ? '✕ Cancelar' : '+ Agregar persona presente'}
@@ -95,8 +99,11 @@ export default function GearCheck() {
             <thead>
               <tr>
                 <th>Nombre</th>
+                <th>Club</th>
                 <th>Rol</th>
                 <th>Tier</th>
+                <th>Estado</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -104,13 +111,30 @@ export default function GearCheck() {
                 <tr
                   key={f.id}
                   className={
-                    f.tier === 'na' ? styles.rowAbsent
+                    f.status === 'disqualified' ? styles.rowDisqualified
+                    : f.status === 'paused' ? styles.rowPaused
+                    : f.tier === 'na' ? styles.rowAbsent
                     : f.tier === 'tbd' ? styles.rowPending
                     : styles.rowActive
                   }
                 >
-                  <td className={styles.name}>{f.name}</td>
-                  <td className={styles.role}>{CONTROL_ROLE_LABELS[f.role] ?? f.role ?? '—'}</td>
+                  <td className={styles.name}>
+                    <InlineEdit value={f.name} onSave={(v) => updateFighterInfo(f.id, { name: v })} />
+                  </td>
+                  <td>
+                    <InlineEdit value={f.club} onSave={(v) => updateFighterInfo(f.id, { club: v })} />
+                  </td>
+                  <td>
+                    <select
+                      className={styles.roleSelect}
+                      value={f.role ?? 'none'}
+                      onChange={(e) => updateFighterInfo(f.id, { role: e.target.value })}
+                    >
+                      {CONTROL_ROLES.map((r) => (
+                        <option key={r} value={r}>{CONTROL_ROLE_LABELS[r]}</option>
+                      ))}
+                    </select>
+                  </td>
                   <td>
                     <select
                       className={`${styles.tierSelect} ${styles[`tier_${f.tier}`]}`}
@@ -122,6 +146,16 @@ export default function GearCheck() {
                       ))}
                     </select>
                   </td>
+                  <td>
+                    <StatusActions fighter={f} />
+                  </td>
+                  <td>
+                    <button
+                      className={styles.deleteBtn}
+                      title="Eliminar"
+                      onClick={() => { if (confirm(`¿Eliminar a ${f.name}?`)) deleteFighter(f.id) }}
+                    >✕</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -129,5 +163,94 @@ export default function GearCheck() {
         </div>
       ))}
     </div>
+  )
+}
+
+function StatusActions({ fighter }) {
+  const [busy, setBusy] = useState(false)
+  const f = fighter
+
+  async function handlePause() {
+    if (busy) return
+    const msg = `¿Pausar a ${f.name}? Si tiene asalto pendiente en la ronda activa, se cancelará y ambos recibirán bye.`
+    if (!confirm(msg)) return
+    setBusy(true)
+    try {
+      const result = await updateFighterStatus(f.id, 'paused')
+      if (result.cancelledMatch) {
+        alert(`${f.name} pausado. Asalto cancelado, bye para ambos.`)
+      }
+    } finally { setBusy(false) }
+  }
+
+  async function handleUnpause() {
+    if (busy) return
+    setBusy(true)
+    try { await updateFighterStatus(f.id, 'active') }
+    finally { setBusy(false) }
+  }
+
+  async function handleReinstate() {
+    if (busy) return
+    if (!confirm(`¿Reinstalar a ${f.name}? Volverá a ser elegible para rondas futuras.`)) return
+    setBusy(true)
+    try { await updateFighterStatus(f.id, 'active') }
+    finally { setBusy(false) }
+  }
+
+  if (f.status === 'disqualified') {
+    return (
+      <div className={styles.statusCell}>
+        <span className={styles.dqBadge}>DQ</span>
+        <button className={styles.reinstateBtn} onClick={handleReinstate} disabled={busy}>↩</button>
+      </div>
+    )
+  }
+
+  if (f.status === 'paused') {
+    return (
+      <div className={styles.statusCell}>
+        <button className={styles.unpauseBtn} onClick={handleUnpause} disabled={busy}>▶ Activar</button>
+      </div>
+    )
+  }
+
+  if (['tbd', 'na'].includes(f.tier)) return <span className={styles.statusNA}>—</span>
+
+  return (
+    <button className={styles.pauseBtn} onClick={handlePause} disabled={busy}>⏸</button>
+  )
+}
+
+function InlineEdit({ value, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+
+  useEffect(() => { setDraft(value) }, [value])
+
+  function commit() {
+    setEditing(false)
+    const trimmed = draft.trim()
+    if (trimmed && trimmed !== value) onSave(trimmed)
+    else setDraft(value)
+  }
+
+  if (!editing) {
+    return (
+      <span className={styles.inlineValue} onClick={() => setEditing(true)}>
+        {value}
+      </span>
+    )
+  }
+
+  return (
+    <input
+      className={styles.inlineInput}
+      value={draft}
+      autoFocus
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+    />
   )
 }

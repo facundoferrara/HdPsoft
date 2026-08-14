@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, Children } from 'react'
 import styles from './Carousel.module.css'
 
-export default function Carousel({ children, intervalMs = 8000 }) {
+export default function Carousel({ children, intervalMs = 8000, onCycleComplete }) {
   const items = Children.toArray(children)
   const count = items.length
   const [active, setActive] = useState(0)
@@ -9,6 +9,9 @@ export default function Carousel({ children, intervalMs = 8000 }) {
   const [animClass, setAnimClass] = useState('in')
   const progressRef = useRef(0)
   const transitioning = useRef(false)
+  const onCycleRef = useRef(onCycleComplete)
+  const activeRef = useRef(0)
+  onCycleRef.current = onCycleComplete
 
   useEffect(() => {
     if (count <= 1) return
@@ -25,11 +28,16 @@ export default function Carousel({ children, intervalMs = 8000 }) {
         setProgress(100)
         setAnimClass('out')
         setTimeout(() => {
-          setActive((i) => (i + 1) % count)
+          const next = (activeRef.current + 1) % count
+          activeRef.current = next
+          setActive(next)
           progressRef.current = 0
           setProgress(0)
           setAnimClass('in')
           transitioning.current = false
+          if (next === 0) {
+            setTimeout(() => onCycleRef.current?.(), 0)
+          }
         }, 400)
       } else {
         setProgress(progressRef.current)
@@ -41,13 +49,13 @@ export default function Carousel({ children, intervalMs = 8000 }) {
   return (
     <div className={styles.carousel}>
       <div className={styles.progressBar}>
-        <div className={styles.progressFill} style={{ width: `${100 - progress}%` }} />
+        <div className={styles.progressFill} style={{ transform: `scaleX(${(100 - progress) / 100})` }} />
       </div>
       <div key={active} className={`${styles.slideContainer} ${animClass === 'out' ? styles.slideOut : styles.slideIn}`}>
         {items[active]}
       </div>
       <div className={styles.progressBar}>
-        <div className={styles.progressFill} style={{ width: `${100 - progress}%` }} />
+        <div className={styles.progressFill} style={{ transform: `scaleX(${(100 - progress) / 100})` }} />
       </div>
     </div>
   )

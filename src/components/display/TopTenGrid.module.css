@@ -1,0 +1,136 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1vh 2vw;
+  box-sizing: border-box;
+}
+
+.headerRow {
+  display: grid;
+  grid-template-columns: 3vw 1fr 5vw repeat(3, 1fr);
+  align-items: center;
+  justify-items: center;
+  gap: 0.8vw;
+  padding: 0.8vh 1vw;
+  border-bottom: 1px solid rgba(200, 165, 90, 0.2);
+  margin-bottom: 0.3vh;
+}
+
+.hRank {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2vh;
+  color: #c8a55a;
+  text-align: center;
+}
+
+.hName {
+  font-size: 1.6vh;
+  color: #6a7494;
+  justify-self: start;
+}
+
+.hPoints {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.8vh;
+  color: #c0c8d8;
+  text-align: center;
+}
+
+.hStat {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.2vh;
+  color: #c8a55a;
+  text-align: center;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  justify-content: space-between;
+  gap: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 3vw 1fr 5vw repeat(3, 1fr);
+  align-items: center;
+  justify-items: center;
+  gap: 0.8vw;
+  padding: 0.8vh 1vw;
+  border-radius: 0.5vh;
+  background: rgba(255, 255, 255, 0.03);
+  animation: rowIn 0.4s ease-out both;
+}
+
+.row:nth-child(1) { background: rgba(200, 165, 90, 0.1); }
+.row:nth-child(2) { background: rgba(200, 165, 90, 0.06); }
+.row:nth-child(3) { background: rgba(200, 165, 90, 0.04); }
+
+@keyframes rowIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.rank {
+  font-family: 'DM Serif Display', serif;
+  font-size: 3.5vh;
+  color: #c8a55a;
+  text-align: center;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2vh;
+  overflow: hidden;
+  justify-self: start;
+}
+
+.name {
+  font-weight: 700;
+  font-size: 2.2vh;
+  color: #e8ecf2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wld {
+  font-size: 1.4vh;
+  color: #a8b0c0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+}
+
+.points {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.4vh;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: #c0c8d8;
+}
+
+.statCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1vh;
+}
+
+.statRank {
+  font-family: 'DM Serif Display', serif;
+  font-size: 2.6vh;
+  color: #c0c8d8;
+  font-variant-numeric: tabular-nums;
+}
+
+.statValue {
+  font-size: 1.6vh;
+  color: #8890a8;
+  font-variant-numeric: tabular-nums;
+}

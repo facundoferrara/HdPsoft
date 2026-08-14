@@ -245,7 +245,9 @@ async function importRoster() {
       matches_drawn: 0,
       hand_hits_landed: 0,
       double_hit_count: 0,
-      contrapaso_count: 0,
+      contrapaso_count: 0, clean_hand_hits: 0, clean_body_hits: 0,
+      clean_exchanges_won: 0,
+      total_valid_exchanges: 0,
     })
   }
   await lbBatch.commit()

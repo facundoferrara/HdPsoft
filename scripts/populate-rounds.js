@@ -42,7 +42,7 @@ const ZONES = ['hand', 'body', 'head']
 const ZONE_VALUES = { hand: 1, body: 2, head: 3 }
 const STARTING_PTS = 5
 const WEAPONS = ['espada y broquel', 'espada larga', 'espada sola', 'sable y broquel']
-const ROUNDS_TO_GENERATE = 5
+const ROUNDS_TO_GENERATE = 6
 
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)] }
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min }
@@ -73,9 +73,12 @@ function computeMatchResult(blocks) {
   const exchanges = []
   let scoreRed = STARTING_PTS, scoreBlue = STARTING_PTS
   let defenseLossRed = 0, defenseLossBlue = 0
+  let cleanHandRed = 0, cleanHandBlue = 0
+  let cleanBodyRed = 0, cleanBodyBlue = 0
   let cleanHeadRed = 0, cleanHeadBlue = 0
   let contraRescuedRed = 0, contraRescuedBlue = 0
   let contraCountRed = 0, contraCountBlue = 0
+  let cleanExchRed = 0, cleanExchBlue = 0, totalValidExch = 0
   let handHitsRed = 0, handHitsBlue = 0
   let doubleHitCount = 0
   let n = 1
@@ -83,6 +86,7 @@ function computeMatchResult(blocks) {
   for (const block of blocks) {
     let deltaRed = 0, deltaBlue = 0, pointsRescued = 0
 
+    totalValidExch++
     if (block.type === 'presa') {
       deltaRed = -Math.min(2, scoreRed)
       deltaBlue = -Math.min(2, scoreBlue)
@@ -122,8 +126,11 @@ function computeMatchResult(blocks) {
 
       if (victim === 'red') defenseLossRed += rawHit; else defenseLossBlue += rawHit
 
-      if (hitZone === 'head' && !contrapasoZone) {
-        if (attacker === 'red') cleanHeadRed++; else cleanHeadBlue++
+      if (!contrapasoZone) {
+        if (attacker === 'red') cleanExchRed++; else cleanExchBlue++
+        if (hitZone === 'hand') { if (attacker === 'red') cleanHandRed++; else cleanHandBlue++ }
+        if (hitZone === 'body') { if (attacker === 'red') cleanBodyRed++; else cleanBodyBlue++ }
+        if (hitZone === 'head') { if (attacker === 'red') cleanHeadRed++; else cleanHeadBlue++ }
       }
 
       if (contrapasoZone) {
@@ -138,9 +145,9 @@ function computeMatchResult(blocks) {
       }
 
       if (attacker === 'red') {
-        deltaRed = loss; deltaBlue = -loss
+        deltaBlue = -loss
       } else {
-        deltaBlue = loss; deltaRed = -loss
+        deltaRed = -loss
       }
 
       exchanges.push({
@@ -166,33 +173,62 @@ function computeMatchResult(blocks) {
   return {
     exchanges, finalScoreRed: scoreRed, finalScoreBlue: scoreBlue, winnerId,
     defenseLossRed, defenseLossBlue,
+    cleanHandRed, cleanHandBlue,
+    cleanBodyRed, cleanBodyBlue,
     cleanHeadRed, cleanHeadBlue,
     contraRescuedRed, contraRescuedBlue,
     contraCountRed, contraCountBlue,
+    cleanExchRed, cleanExchBlue, totalValidExch,
     handHitsRed, handHitsBlue,
     doubleHitCount,
   }
 }
 
-async function run() {
-  // Cancel existing active/pending matches & rounds (rules allow status updates)
-  console.log('=== Cancelando matches/rounds existentes ===')
+async function batchDelete(docs) {
+  for (let i = 0; i < docs.length; i += 500) {
+    const batch = writeBatch(db)
+    docs.slice(i, i + 500).forEach((d) => batch.delete(d.ref))
+    await batch.commit()
+  }
+}
+
+async function clearMatchesWithExchanges() {
   const matchesSnap = await getDocs(collection(db, 'matches'))
-  for (const d of matchesSnap.docs) {
-    if (['pending', 'active'].includes(d.data().status)) {
-      await setDoc(d.ref, { status: 'cancelled' }, { merge: true })
+  if (matchesSnap.empty) return { matches: 0, exchanges: 0 }
+  let exchCount = 0
+  for (const matchDoc of matchesSnap.docs) {
+    const exchSnap = await getDocs(collection(db, 'matches', matchDoc.id, 'exchanges'))
+    if (!exchSnap.empty) {
+      await batchDelete(exchSnap.docs)
+      exchCount += exchSnap.size
     }
   }
+  await batchDelete(matchesSnap.docs)
+  return { matches: matchesSnap.size, exchanges: exchCount }
+}
+
+async function run() {
+  console.log('=== Limpiando datos previos ===')
+  const { matches: mDel, exchanges: eDel } = await clearMatchesWithExchanges()
+  if (mDel) console.log(`  ${mDel} matches eliminados (${eDel} exchanges)`)
+
   const roundsSnap = await getDocs(collection(db, 'rounds'))
-  let maxRound = 0
-  for (const d of roundsSnap.docs) {
-    const rn = d.data().round_number ?? 0
-    if (rn > maxRound) maxRound = rn
-    if (d.data().status === 'active') {
-      await setDoc(d.ref, { status: 'complete', completed_at: serverTimestamp() }, { merge: true })
-    }
+  if (!roundsSnap.empty) {
+    await batchDelete(roundsSnap.docs)
+    console.log(`  ${roundsSnap.size} rounds eliminados`)
   }
-  console.log(`  ${matchesSnap.size} matches, ${roundsSnap.size} rounds procesados (max round: ${maxRound})`)
+
+  const byesSnap = await getDocs(collection(db, 'byes'))
+  if (!byesSnap.empty) {
+    await batchDelete(byesSnap.docs)
+    console.log(`  ${byesSnap.size} byes eliminados`)
+  }
+
+  const csSnap = await getDocs(collection(db, 'control_stats'))
+  if (!csSnap.empty) {
+    await batchDelete(csSnap.docs)
+    console.log(`  ${csSnap.size} control_stats eliminados`)
+  }
 
   console.log('\n=== Leyendo fighters ===')
   const fightersSnap = await getDocs(collection(db, 'fighters'))
@@ -212,21 +248,16 @@ async function run() {
       points_lost_defense: 0, clean_head_hits: 0, points_rescued_contrapaso: 0,
       wins_espada_larga: 0, matches_won: 0, matches_lost: 0, matches_drawn: 0,
       hand_hits_landed: 0, double_hit_count: 0, contrapaso_count: 0,
+      clean_hand_hits: 0, clean_body_hits: 0,
+      clean_exchanges_won: 0, total_valid_exchanges: 0,
     })
   }
 
   const pastPairs = new Set()
-  for (const d of matchesSnap.docs) {
-    const data = d.data()
-    if (data.fighter_red_id && data.fighter_blue_id) {
-      pastPairs.add(pairKey(data.fighter_red_id, data.fighter_blue_id))
-    }
-  }
   const leaderMap = Object.fromEntries(activeFighters.map((f) => [f.id, { total_points: 0, bye_count: 0 }]))
   const roleStats = {}
   for (const f of eligible) roleStats[f.id] = { refCount: 0, judgeCount: 0 }
 
-  const roundOffset = maxRound
   for (let round = 1; round <= ROUNDS_TO_GENERATE; round++) {
     console.log(`\n=== Ronda ${round} ===`)
 
@@ -239,9 +270,8 @@ async function run() {
     const { pairs, byeFighterId } = generatePairings(enriched, pastPairs)
     console.log(`  ${pairs.length} asaltos${byeFighterId ? `, bye: ${fighters.find(f=>f.id===byeFighterId)?.name}` : ''}`)
 
-    // Create round doc
     const roundRef = await addDoc(collection(db, 'rounds'), {
-      round_number: roundOffset + round, status: 'active', started_at: serverTimestamp(),
+      round_number: round, status: 'active', started_at: serverTimestamp(),
     })
 
     let matchNum = 1
@@ -329,9 +359,13 @@ async function run() {
         matches_complete: increment(1),
         [wldRed]: increment(1),
         points_lost_defense: increment(result.defenseLossRed),
+        clean_hand_hits: increment(result.cleanHandRed),
+        clean_body_hits: increment(result.cleanBodyRed),
         clean_head_hits: increment(result.cleanHeadRed),
         points_rescued_contrapaso: increment(result.contraRescuedRed),
         contrapaso_count: increment(result.contraCountRed),
+        clean_exchanges_won: increment(result.cleanExchRed),
+        total_valid_exchanges: increment(result.totalValidExch),
         hand_hits_landed: increment(result.handHitsRed),
         double_hit_count: increment(result.doubleHitCount),
         wins_espada_larga: increment(espadaLargaRed),
@@ -341,9 +375,13 @@ async function run() {
         matches_complete: increment(1),
         [wldBlue]: increment(1),
         points_lost_defense: increment(result.defenseLossBlue),
+        clean_hand_hits: increment(result.cleanHandBlue),
+        clean_body_hits: increment(result.cleanBodyBlue),
         clean_head_hits: increment(result.cleanHeadBlue),
         points_rescued_contrapaso: increment(result.contraRescuedBlue),
         contrapaso_count: increment(result.contraCountBlue),
+        clean_exchanges_won: increment(result.cleanExchBlue),
+        total_valid_exchanges: increment(result.totalValidExch),
         hand_hits_landed: increment(result.handHitsBlue),
         double_hit_count: increment(result.doubleHitCount),
         wins_espada_larga: increment(espadaLargaBlue),
@@ -387,7 +425,7 @@ async function run() {
     }, { merge: true })
   }
 
-  console.log('\n=== Poblado completo: 5 rondas con resultados aleatorios ===')
+  console.log(`\n=== Poblado completo: ${ROUNDS_TO_GENERATE} rondas con resultados aleatorios ===`)
   process.exit(0)
 }
 

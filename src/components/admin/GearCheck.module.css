@@ -1,5 +1,5 @@
-.page { display: flex; flex-direction: column; gap: 1.5rem; }
-.loading { color: #666; padding: 2rem; }
+.page { display: flex; flex-direction: column; gap: 1.5rem; max-width: 960px; margin: 0 auto; padding: 1rem; }
+.loading { color: #6a7494; padding: 2rem; }
 
 .summary {
   display: flex;
@@ -24,23 +24,23 @@
 }
 
 .chipAbsent {
-  background: #1e2a3a;
-  color: #64b5f6;
-  border-color: #2a3a4a;
+  background: #1a2050;
+  color: #8890c0;
+  border-color: #2a3065;
 }
 
 .addStaffBtn {
   margin-left: auto;
   padding: 0.3rem 0.8rem;
-  background: #1e3a4a;
-  border: 1px solid #00bcd4;
+  background: #2a2210;
+  border: 1px solid #c8a55a;
   border-radius: 20px;
-  color: #00bcd4;
+  color: #c8a55a;
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
 }
-.addStaffBtn:hover { background: #254d63; }
+.addStaffBtn:hover { background: #3a3218; }
 
 .addStaffForm {
   display: flex;
@@ -48,17 +48,17 @@
   gap: 0.5rem;
   align-items: center;
   padding: 0.75rem;
-  background: #151515;
-  border: 1px solid #2a2a2a;
+  background: #111640;
+  border: 1px solid #242a5a;
   border-radius: 8px;
 }
 
 .addStaffInput,
 .addStaffSelect {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: #161c4a;
+  border: 1px solid #2a3065;
   border-radius: 4px;
-  color: #e0e0e0;
+  color: #d8dce6;
   padding: 0.4rem 0.6rem;
   font-size: 0.85rem;
 }
@@ -82,7 +82,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #888;
+  color: #8890a0;
   margin: 0 0 0.5rem;
 }
 
@@ -90,35 +90,57 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+  table-layout: fixed;
 }
 
 .table th {
   text-align: left;
   padding: 0.4rem 0.75rem;
-  border-bottom: 1px solid #2a2a2a;
-  color: #666;
+  border-bottom: 1px solid #242a5a;
+  color: #6a7494;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
+.table th:nth-child(1) { width: 26%; }
+.table th:nth-child(2) { width: 16%; }
+.table th:nth-child(3) { width: 18%; }
+.table th:nth-child(4) { width: 18%; }
+.table th:nth-child(5) { width: 14%; }
+.table th:nth-child(6) { width: 8%; }
+
 .table td {
   padding: 0.4rem 0.75rem;
-  border-bottom: 1px solid #1e1e1e;
+  border-bottom: 1px solid #1a2050;
+  vertical-align: middle;
 }
 
 .rowPending td { color: #f5a623; }
-.rowAbsent td { color: #555; }
-.rowActive td { color: #e0e0e0; }
+.rowAbsent td { color: #5a6488; }
+.rowActive td { color: #d8dce6; }
+.rowPaused td { color: #c8a55a; background: #1a1808; }
+.rowDisqualified td { color: #8a6060; text-decoration: line-through; background: #1a0a0a; }
 
 .name { font-weight: 500; }
-.role { color: #888; font-size: 0.82rem; }
+.role { color: #8890a0; font-size: 0.82rem; }
+
+.roleSelect {
+  background: #161c4a; border: 1px solid #2a3065; border-radius: 4px;
+  color: #8890a0; padding: 0.2rem 0.4rem; font-size: 0.78rem; cursor: pointer;
+}
+
+.deleteBtn {
+  background: transparent; border: none; color: #6a7494;
+  font-size: 0.85rem; cursor: pointer; padding: 0.2rem 0.4rem;
+}
+.deleteBtn:hover { color: #ef5350; }
 
 .tierSelect {
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: #161c4a;
+  border: 1px solid #2a3065;
   border-radius: 4px;
-  color: #e0e0e0;
+  color: #d8dce6;
   padding: 0.25rem 0.5rem;
   font-size: 0.85rem;
   cursor: pointer;
@@ -128,13 +150,36 @@
 .tier_boffer { border-color: #42a5f5; color: #42a5f5; }
 .tier_nylon { border-color: #ab47bc; color: #ab47bc; }
 .tier_acero { border-color: #81c784; color: #81c784; }
-.tier_na { border-color: #555; color: #555; }
+.tier_na { border-color: #5a6488; color: #5a6488; }
+
+.inlineValue {
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+}
+.inlineValue:hover {
+  background: #1e2455;
+}
+
+.inlineInput {
+  background: #0e1338;
+  border: 1px solid #3a4075;
+  border-radius: 4px;
+  color: #d8dce6;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.85rem;
+  width: 100%;
+}
+.inlineInput:focus {
+  outline: none;
+  border-color: #5a6aaa;
+}
 
 .weaponInput {
-  background: #111;
-  border: 1px solid #2a2a2a;
+  background: #0e1338;
+  border: 1px solid #242a5a;
   border-radius: 4px;
-  color: #ccc;
+  color: #c0c8d8;
   padding: 0.25rem 0.5rem;
   font-size: 0.85rem;
   width: 140px;
@@ -142,5 +187,38 @@
 
 .weaponInput:focus {
   outline: none;
-  border-color: #444;
+  border-color: #3a4075;
 }
+
+.chipPaused { background: #2a2210; color: #c8a55a; border-color: #4a3a1a; }
+.chipDq { background: #2a0a0a; color: #ef5350; border-color: #4a1a1a; }
+
+.statusCell { display: flex; align-items: center; gap: 0.3rem; }
+.statusNA { color: #5a6488; }
+
+.pauseBtn {
+  background: transparent; border: 1px solid #4a3a1a; border-radius: 4px;
+  color: #c8a55a; font-size: 0.78rem; padding: 0.2rem 0.4rem; cursor: pointer;
+}
+.pauseBtn:hover { background: #1a1408; border-color: #6a5a30; }
+.pauseBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.unpauseBtn {
+  background: #0a1a0a; border: 1px solid #2a4a2a; border-radius: 4px;
+  color: #81c784; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.5rem; cursor: pointer;
+}
+.unpauseBtn:hover { background: #123016; border-color: #4a6a4a; }
+.unpauseBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.dqBadge {
+  font-size: 0.68rem; font-weight: 700; color: #ef5350;
+  background: #2a0a0a; border: 1px solid #4a1a1a;
+  padding: 0.1rem 0.35rem; border-radius: 3px; letter-spacing: 0.04em;
+}
+
+.reinstateBtn {
+  background: transparent; border: 1px solid #3a3065; border-radius: 4px;
+  color: #8890a0; font-size: 0.78rem; padding: 0.15rem 0.35rem; cursor: pointer;
+}
+.reinstateBtn:hover { background: #1e2455; color: #c0c8d8; }
+.reinstateBtn:disabled { opacity: 0.4; cursor: not-allowed; }

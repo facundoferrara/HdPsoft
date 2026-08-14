@@ -69,16 +69,18 @@ export function calcSelfDisarm(priorHitValue, selfDisarmBase, opponentCurrentPoi
 }
 
 /**
- * Calcula puntos de presa mutua (ambos pierden 2, sin transferencia).
+ * Calcula puntos de presa mutua (ambos pierden el valor de presa, sin transferencia).
  *
  * @param {number} pointsRed
  * @param {number} pointsBlue
+ * @param {object} zoneValues
  * @returns {{ deltaRed: number, deltaBlue: number }}
  */
-export function calcMutualPresa(pointsRed, pointsBlue) {
+export function calcMutualPresa(pointsRed, pointsBlue, zoneValues) {
+  const presaVal = zoneValues?.presa_mutua ?? 2
   return {
-    deltaRed: Math.min(2, pointsRed),
-    deltaBlue: Math.min(2, pointsBlue),
+    deltaRed: Math.min(presaVal, pointsRed),
+    deltaBlue: Math.min(presaVal, pointsBlue),
   }
 }
 
