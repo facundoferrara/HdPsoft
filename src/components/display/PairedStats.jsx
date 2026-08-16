@@ -1,3 +1,4 @@
+import { clubGradient, medalBorder } from '../../utils/clubColors'
 import styles from './PairedStats.module.css'
 
 function assignRanks(sorted) {
@@ -27,10 +28,13 @@ function StatColumn({ title, subtitle, entries, formatValue, sortAsc, formatSeco
           <li
             key={entry.id}
             className={`${styles.row} ${!entry.qualified ? styles.unqualified : ''}`}
-            style={{ animationDelay: `${i * 0.08}s` }}
+            style={{ animationDelay: `${i * 0.08}s`, background: clubGradient(entry.club), border: medalBorder(entry.rank - 1) }}
           >
             <span className={styles.rank}>{entry.rank}</span>
-            <span className={styles.name}>{entry.name}</span>
+            <div className={styles.nameBlock}>
+              <span className={styles.name}>{entry.name}</span>
+              <span className={styles.club}>{entry.club}</span>
+            </div>
             <span className={styles.value}>
               {formatValue(entry.value)}
               {formatSecondary && (

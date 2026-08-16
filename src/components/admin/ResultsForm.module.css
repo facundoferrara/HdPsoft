@@ -440,3 +440,78 @@
 .disarmBtn:hover { border-color: #6a7494; color: #c0c8d8; }
 .disarmBtnActiveRed  { background: #3a1e1e; border-color: #ef5350; color: #ef5350; }
 .disarmBtnActiveBlue { background: #1a2a3a; border-color: #42a5f5; color: #42a5f5; }
+
+/* -- Edit button (replaces reset for closed matches) ---------------------- */
+.editBtn {
+  padding: 0.25rem 0.65rem; background: #1a1e30; border: 1px solid #4a5080;
+  border-radius: 5px; color: #c8a55a; font-size: 0.72rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: background 0.12s;
+}
+.editBtn:hover { background: #252a45; border-color: #c8a55a; }
+
+/* -- Edit confirmation dialog --------------------------------------------- */
+.editConfirmOverlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, 0.65); display: flex; align-items: center; justify-content: center;
+}
+.editConfirmDialog {
+  background: #111640; border: 1px solid #4a3a1a; border-radius: 10px;
+  padding: 1.5rem 2rem; max-width: 400px; width: 90%;
+}
+.editConfirmText {
+  margin: 0 0 0.75rem; font-size: 0.88rem; color: #c0c8d8; line-height: 1.5;
+}
+.editConfirmActions {
+  display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1rem;
+}
+.editConfirmYes {
+  padding: 0.5rem 1.2rem; background: #3a2e00; border: 1px solid #c8a55a;
+  border-radius: 6px; color: #c8a55a; font-size: 0.82rem; font-weight: 700; cursor: pointer;
+}
+.editConfirmYes:hover:not(:disabled) { background: #4a3e10; border-color: #f5a623; color: #f5a623; }
+.editConfirmYes:disabled { opacity: 0.4; cursor: not-allowed; }
+.editConfirmNo {
+  padding: 0.5rem 1.2rem; background: #161c4a; border: 1px solid #3a4075;
+  border-radius: 6px; color: #9098b0; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+}
+.editConfirmNo:hover { background: #1e2455; border-color: #6a7494; color: #c0c8d8; }
+
+/* -- Closed match summary ------------------------------------------------- */
+.closedSummary {
+  display: flex; flex-direction: column; gap: 0.75rem;
+  padding: 1rem; background: #0e1338; border: 1px solid #1e2455; border-radius: 8px;
+}
+.closedScoreRow {
+  display: flex; align-items: center; justify-content: center; gap: 1rem;
+  font-size: 0.9rem;
+}
+.closedScore {
+  display: flex; align-items: baseline; gap: 0.5rem;
+}
+.closedScoreNum {
+  font-size: 1.8rem; font-weight: 700; color: #e8ecf2;
+  font-variant-numeric: tabular-nums;
+}
+.closedDetails {
+  display: flex; flex-direction: column; gap: 0.3rem;
+  padding: 0.5rem 0.75rem; background: #111640; border-radius: 5px;
+}
+.closedDetail {
+  font-size: 0.82rem; color: #8890b0;
+}
+.closedDetailLabel {
+  font-weight: 700; color: #6a7494;
+}
+.closedOverride {
+  color: #c8a55a; font-weight: 700;
+}
+.closedNote {
+  font-size: 0.82rem; color: #b0935a; font-style: italic;
+  padding: 0.35rem 0.5rem; background: #1a1408; border: 1px solid #3a3010;
+  border-radius: 4px;
+}
+
+/* -- Override warning ----------------------------------------------------- */
+.overrideWarning {
+  margin: 0; font-size: 0.82rem; color: #ef5350; font-weight: 600;
+}

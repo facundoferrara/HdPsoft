@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { onSnapshot, query, orderBy, limit } from 'firebase/firestore'
+import { onSnapshot, query, orderBy } from 'firebase/firestore'
 import { leaderboardRef } from '../firebase/db'
 
 /**
@@ -12,11 +12,12 @@ export function useLeaderboard(cap) {
 
   useEffect(() => {
     const constraints = [orderBy('total_points', 'desc')]
-    if (cap) constraints.push(limit(cap))
     const q = query(leaderboardRef, ...constraints)
 
     const unsub = onSnapshot(q, (snap) => {
-      setLeaderboard(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
+      let entries = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      if (cap) entries = entries.slice(0, cap)
+      setLeaderboard(entries)
       setLoading(false)
     })
     return unsub

@@ -68,6 +68,13 @@ service cloud.firestore {
       allow delete: if true;
     }
 
+    // ── Cutting (torneo de corte — CRUD independiente) ─────────────────────
+    match /cutting/{participantId} {
+      allow read: if true;
+      allow create, delete: if true;
+      allow update: if true;
+    }
+
     // ── Control stats (contadores acumulados de árbitro/juez, todo el evento) ──
     match /control_stats/{fighterId} {
       allow read: if true;
@@ -100,7 +107,8 @@ service cloud.firestore {
       let completionKeys = ['status', 'final_score_red', 'final_score_blue', 'winner_id',
                             'ended_early', 'ended_by_depletion',
                             'ended_by_red_card', 'red_carded_fighter', 'calibration_pending', 'calibration_score',
-                            'override', 'override_note', 'overridden_at'].toSet();
+                            'override', 'override_note', 'overridden_at',
+                            '_lb_snapshot'].toSet();
       // Cancelación
       let cancellationKeys = ['status'].toSet();
       // Control body update

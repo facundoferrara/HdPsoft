@@ -244,7 +244,7 @@ async function run() {
   for (const f of fighters) {
     await setDoc(doc(db, 'leaderboard', f.id), {
       fighter_id: f.id, name: f.name, club: f.club,
-      total_points: 0, rounds_played: 0, matches_complete: 0, bye_count: 0,
+      total_points: 0, matches_complete: 0, bye_count: 0,
       points_lost_defense: 0, clean_head_hits: 0, points_rescued_contrapaso: 0,
       wins_espada_larga: 0, matches_won: 0, matches_lost: 0, matches_drawn: 0,
       hand_hits_landed: 0, double_hit_count: 0, contrapaso_count: 0,

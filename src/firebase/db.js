@@ -22,6 +22,7 @@ export const matchesRef = collection(db, 'matches')
 export const leaderboardRef = collection(db, 'leaderboard')
 export const byesRef = collection(db, 'byes')
 export const controlStatsRef = collection(db, 'control_stats')
+export const cuttingRef = collection(db, 'cutting')
 
 /** Subcolección de intercambios de un asalto */
 export const exchangesRef = (matchId) =>

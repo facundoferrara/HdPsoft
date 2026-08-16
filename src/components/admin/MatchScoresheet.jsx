@@ -3,7 +3,7 @@ import { useRoundMatches } from '../../hooks/useMatches'
 import { useRounds } from '../../hooks/useRounds'
 import { useFighters } from '../../hooks/useFighters'
 import { useConfig } from '../../hooks/useConfig'
-import { completeMatch, overrideMatch, updateMatchWeapon, addCustomWeapon } from '../../firebase/writes'
+import { completeMatch, overrideMatch, reopenMatch, updateMatchWeapon, addCustomWeapon } from '../../firebase/writes'
 import { useWeapons } from '../../hooks/useWeapons'
 import { calcNormalHit, calcContrapaso, calcDouble, calcMutualPresa } from '../../utils/scoring'
 import { PRIMARY_ZONES } from '../../utils/zones'
@@ -354,6 +354,7 @@ export default function MatchScoresheet({ matchId, roundId: roundIdProp, initial
   const [blocks, setBlocksRaw] = useState(() => initialBlocks ?? emptyBlocks())
   const [saving, setSaving] = useState(false)
   const [overrideMode, setOverrideMode] = useState(false)
+  const [showEditConfirm, setShowEditConfirm] = useState(false)
 
   function setBlocks(updater) {
     setBlocksRaw((prev) => {
@@ -512,10 +513,38 @@ export default function MatchScoresheet({ matchId, roundId: roundIdProp, initial
 
       <div className={styles.toolBar}>
         <WeaponBar matchId={matchId} match={match} weapons={weapons} />
-        <button type="button" className={styles.resetBtn} onClick={handleReset}>Resetear asalto</button>
+        {matchAlreadyComplete ? (
+          <button type="button" className={styles.editBtn} onClick={() => setShowEditConfirm(true)}>Editar asalto</button>
+        ) : (
+          <button type="button" className={styles.resetBtn} onClick={handleReset}>Resetear asalto</button>
+        )}
       </div>
 
-      {!overrideMode && (
+      {showEditConfirm && (
+        <div className={styles.editConfirmOverlay}>
+          <div className={styles.editConfirmDialog}>
+            <p className={styles.editConfirmText}>Este asalto ya está cerrado. Se revertirán los puntajes del leaderboard para poder editarlo.</p>
+            <p className={styles.editConfirmText}>¿Seguro querés editarlo?</p>
+            <div className={styles.editConfirmActions}>
+              <button className={styles.editConfirmYes} disabled={saving} onClick={async () => {
+                setSaving(true)
+                try {
+                  await reopenMatch(matchId)
+                  setShowEditConfirm(false)
+                  setBlocks(emptyBlocks())
+                } finally { setSaving(false) }
+              }}>{saving ? 'Reabriendo...' : 'Sí, editar'}</button>
+              <button className={styles.editConfirmNo} onClick={() => setShowEditConfirm(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {matchAlreadyComplete && !showEditConfirm && (
+        <ClosedMatchSummary match={match} red={red} blue={blue} />
+      )}
+
+      {!matchAlreadyComplete && !overrideMode && (
         <>
           {blocks.map((block, i) => {
             const disabled = isDepleted && i > depletedAfter
@@ -557,35 +586,74 @@ export default function MatchScoresheet({ matchId, roundId: roundIdProp, initial
             </div>
           )}
 
-          {matchAlreadyComplete ? (
-            <div className={styles.actionRow}>
-              <span className={styles.alreadyDoneLabel}>Asalto ya cerrado</span>
-            </div>
-          ) : (
-            <div className={styles.actionRow}>
-              <button className={styles.confirmBtn} onClick={handleConfirm} disabled={!canConfirm || saving}>
-                {saving ? 'Guardando...' : hasExpulsion ? 'Cerrar por expulsión' : isDepleted ? 'Cerrar por agotamiento' : 'Confirmar y cerrar asalto'}
-              </button>
-              <button
-                className={styles.overrideToggleBtn}
-                onClick={() => setOverrideMode(true)}
-              >
-                ⚠ Override
-              </button>
-            </div>
-          )}
+          <div className={styles.actionRow}>
+            <button className={styles.confirmBtn} onClick={handleConfirm} disabled={!canConfirm || saving}>
+              {saving ? 'Guardando...' : hasExpulsion ? 'Cerrar por expulsión' : isDepleted ? 'Cerrar por agotamiento' : 'Confirmar y cerrar asalto'}
+            </button>
+            <button
+              className={styles.overrideToggleBtn}
+              onClick={() => setOverrideMode(true)}
+            >
+              ⚠ Override
+            </button>
+          </div>
         </>
       )}
 
       {overrideMode && !matchAlreadyComplete && (
-        <OverrideForm red={red} blue={blue} saving={saving} onConfirm={handleOverrideConfirm} onCancel={() => setOverrideMode(false)} />
+        <OverrideForm red={red} blue={blue} saving={saving} maxTotal={startingPts * 2} onConfirm={handleOverrideConfirm} onCancel={() => setOverrideMode(false)} />
       )}
     </div>
   )
 }
 
+// ClosedMatchSummary — read-only summary of a completed match
+function ClosedMatchSummary({ match, red, blue }) {
+  const isOverride = match.override
+  const winner = match.winner_id === match.fighter_red_id ? red?.name
+    : match.winner_id === match.fighter_blue_id ? blue?.name
+    : 'Empate'
+
+  return (
+    <div className={styles.closedSummary}>
+      <div className={styles.closedScoreRow}>
+        <span className={styles.redName}>{red?.name}</span>
+        <span className={styles.closedScore}>
+          <span className={styles.closedScoreNum}>{match.final_score_red ?? '—'}</span>
+          <span className={styles.scoreDash}>—</span>
+          <span className={styles.closedScoreNum}>{match.final_score_blue ?? '—'}</span>
+        </span>
+        <span className={styles.blueName}>{blue?.name}</span>
+      </div>
+
+      <div className={styles.closedDetails}>
+        <div className={styles.closedDetail}>
+          <span className={styles.closedDetailLabel}>Ganador:</span> {winner}
+        </div>
+        {match.ended_by_depletion && (
+          <div className={styles.closedDetail}>Terminó por agotamiento de puntos</div>
+        )}
+        {match.ended_by_red_card && (
+          <div className={styles.closedDetail}>
+            Terminó por tarjeta roja
+            {match.red_carded_fighter === 'both' ? ' (ambos)' : ` (${match.red_carded_fighter === 'red' ? red?.name : blue?.name})`}
+          </div>
+        )}
+        {isOverride && (
+          <>
+            <div className={`${styles.closedDetail} ${styles.closedOverride}`}>Override de mesa</div>
+            {match.override_note && (
+              <div className={styles.closedNote}>{match.override_note}</div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // OverrideForm — corrección manual de mesa, bypassea el cálculo por intercambio
-function OverrideForm({ red, blue, saving, onConfirm, onCancel }) {
+function OverrideForm({ red, blue, saving, maxTotal, onConfirm, onCancel }) {
   const [scoreRed, setScoreRed] = useState('')
   const [scoreBlue, setScoreBlue] = useState('')
   const [note, setNote] = useState('')
@@ -593,7 +661,9 @@ function OverrideForm({ red, blue, saving, onConfirm, onCancel }) {
   const finalRed = Number(scoreRed)
   const finalBlue = Number(scoreBlue)
   const validScores = scoreRed !== '' && scoreBlue !== '' && !Number.isNaN(finalRed) && !Number.isNaN(finalBlue)
-  const canConfirm = validScores && note.trim().length > 0 && !saving
+  const nonNegative = validScores && finalRed >= 0 && finalBlue >= 0
+  const totalOverMax = validScores && (finalRed + finalBlue > maxTotal)
+  const canConfirm = validScores && nonNegative && !totalOverMax && note.trim().length > 0 && !saving
 
   return (
     <div className={styles.overrideForm}>
@@ -604,7 +674,7 @@ function OverrideForm({ red, blue, saving, onConfirm, onCancel }) {
         <label className={styles.overrideScoreField}>
           <span className={styles.redName}>{red?.name}</span>
           <input
-            type="number" min="0" className={styles.overrideScoreInput}
+            type="number" min="0" max={maxTotal} className={styles.overrideScoreInput}
             value={scoreRed} onChange={(e) => setScoreRed(e.target.value)}
           />
         </label>
@@ -612,11 +682,16 @@ function OverrideForm({ red, blue, saving, onConfirm, onCancel }) {
         <label className={styles.overrideScoreField}>
           <span className={styles.blueName}>{blue?.name}</span>
           <input
-            type="number" min="0" className={styles.overrideScoreInput}
+            type="number" min="0" max={maxTotal} className={styles.overrideScoreInput}
             value={scoreBlue} onChange={(e) => setScoreBlue(e.target.value)}
           />
         </label>
       </div>
+      {totalOverMax && (
+        <p className={styles.overrideWarning}>
+          El total ({finalRed + finalBlue}) supera el máximo permitido ({maxTotal}).
+        </p>
+      )}
       <textarea
         className={styles.overrideNoteInput}
         placeholder="Nota editorial (obligatoria) — qué pasó y por qué se corrige a mano"

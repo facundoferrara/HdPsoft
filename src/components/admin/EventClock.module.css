@@ -1,0 +1,40 @@
+.clock {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.time {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #e8ecf2;
+  font-size: 0.95rem;
+}
+
+.divider {
+  color: #3a4075;
+}
+
+.estimate {
+  font-weight: 600;
+}
+
+.ok {
+  color: #81c784;
+}
+
+.warn {
+  color: #f5a623;
+}
+
+.critical {
+  color: #e57373;
+}
+
+.detail {
+  font-weight: 400;
+  color: #7a82a0;
+  font-size: 0.8rem;
+}
