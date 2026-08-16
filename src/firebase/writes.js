@@ -4,6 +4,8 @@ import {
   addDoc,
   setDoc,
   updateDoc,
+  getDoc,
+  deleteDoc,
   writeBatch,
   getDocs,
   query,
@@ -14,7 +16,7 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
-import { matchesRef, roundsRef, byesRef, exchangesRef, fightersRef, weaponsConfigRef } from './db'
+import { matchesRef, roundsRef, byesRef, exchangesRef, fightersRef, weaponsConfigRef, controlStatsRef, leaderboardRef } from './db'
 
 const TIER_ORDER = { boffer: 0, nylon: 1, acero: 2 }
 
@@ -134,6 +136,42 @@ export async function completeMatch(matchId, {
   const leaderboardRed  = redIsExpelled || (endedByRedCard && !redIsExpelled) ? 0 : finalScoreRed
   const leaderboardBlue = blueIsExpelled || (endedByRedCard && !blueIsExpelled) ? 0 : finalScoreBlue
 
+  const wldRed = winnerId === fighterRedId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
+  const wldBlue = winnerId === fighterBlueId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
+
+  const lbSnapshot = {
+    red: {
+      total_points: Math.round(leaderboardRed * 100) / 100,
+      wld: wldRed,
+      points_lost_defense: defenseLossRed ?? 0,
+      clean_hand_hits: cleanHandHitsRed ?? 0,
+      clean_body_hits: cleanBodyHitsRed ?? 0,
+      clean_head_hits: cleanHeadHitsRed ?? 0,
+      points_rescued_contrapaso: contrapasoRescuedRed ?? 0,
+      contrapaso_count: contrapasoCountRed ?? 0,
+      clean_exchanges_won: cleanExchangesRed ?? 0,
+      total_valid_exchanges: totalValidExchanges ?? 0,
+      hand_hits_landed: handHitsRed ?? 0,
+      double_hit_count: doubleHitCount ?? 0,
+      wins_espada_larga: espadaLargaWin(winnerId, fighterRedId, weaponName),
+    },
+    blue: {
+      total_points: Math.round(leaderboardBlue * 100) / 100,
+      wld: wldBlue,
+      points_lost_defense: defenseLossBlue ?? 0,
+      clean_hand_hits: cleanHandHitsBlue ?? 0,
+      clean_body_hits: cleanBodyHitsBlue ?? 0,
+      clean_head_hits: cleanHeadHitsBlue ?? 0,
+      points_rescued_contrapaso: contrapasoRescuedBlue ?? 0,
+      contrapaso_count: contrapasoCountBlue ?? 0,
+      clean_exchanges_won: cleanExchangesBlue ?? 0,
+      total_valid_exchanges: totalValidExchanges ?? 0,
+      hand_hits_landed: handHitsBlue ?? 0,
+      double_hit_count: doubleHitCount ?? 0,
+      wins_espada_larga: espadaLargaWin(winnerId, fighterBlueId, weaponName),
+    },
+  }
+
   batch.update(doc(db, 'matches', matchId), {
     status: 'complete',
     final_score_red: finalScoreRed,
@@ -144,43 +182,41 @@ export async function completeMatch(matchId, {
     ended_by_red_card: endedByRedCard ?? false,
     red_carded_fighter: redCardedFighter ?? null,
     calibration_pending: endedByRedCard && redCardedFighter !== 'both',
+    _lb_snapshot: lbSnapshot,
   })
 
-  const wldRed = winnerId === fighterRedId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
-  const wldBlue = winnerId === fighterBlueId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
-
   batch.update(doc(db, 'leaderboard', fighterRedId), {
-    total_points: increment(Math.round(leaderboardRed * 100) / 100),
+    total_points: increment(lbSnapshot.red.total_points),
     matches_complete: increment(1),
     [wldRed]: increment(1),
-    points_lost_defense: increment(defenseLossRed ?? 0),
-    clean_hand_hits: increment(cleanHandHitsRed ?? 0),
-    clean_body_hits: increment(cleanBodyHitsRed ?? 0),
-    clean_head_hits: increment(cleanHeadHitsRed ?? 0),
-    points_rescued_contrapaso: increment(contrapasoRescuedRed ?? 0),
-    contrapaso_count: increment(contrapasoCountRed ?? 0),
-    clean_exchanges_won: increment(cleanExchangesRed ?? 0),
-    total_valid_exchanges: increment(totalValidExchanges ?? 0),
-    hand_hits_landed: increment(handHitsRed ?? 0),
-    double_hit_count: increment(doubleHitCount ?? 0),
-    wins_espada_larga: increment(espadaLargaWin(winnerId, fighterRedId, weaponName)),
+    points_lost_defense: increment(lbSnapshot.red.points_lost_defense),
+    clean_hand_hits: increment(lbSnapshot.red.clean_hand_hits),
+    clean_body_hits: increment(lbSnapshot.red.clean_body_hits),
+    clean_head_hits: increment(lbSnapshot.red.clean_head_hits),
+    points_rescued_contrapaso: increment(lbSnapshot.red.points_rescued_contrapaso),
+    contrapaso_count: increment(lbSnapshot.red.contrapaso_count),
+    clean_exchanges_won: increment(lbSnapshot.red.clean_exchanges_won),
+    total_valid_exchanges: increment(lbSnapshot.red.total_valid_exchanges),
+    hand_hits_landed: increment(lbSnapshot.red.hand_hits_landed),
+    double_hit_count: increment(lbSnapshot.red.double_hit_count),
+    wins_espada_larga: increment(lbSnapshot.red.wins_espada_larga),
   })
 
   batch.update(doc(db, 'leaderboard', fighterBlueId), {
-    total_points: increment(Math.round(leaderboardBlue * 100) / 100),
+    total_points: increment(lbSnapshot.blue.total_points),
     matches_complete: increment(1),
     [wldBlue]: increment(1),
-    points_lost_defense: increment(defenseLossBlue ?? 0),
-    clean_hand_hits: increment(cleanHandHitsBlue ?? 0),
-    clean_body_hits: increment(cleanBodyHitsBlue ?? 0),
-    clean_head_hits: increment(cleanHeadHitsBlue ?? 0),
-    points_rescued_contrapaso: increment(contrapasoRescuedBlue ?? 0),
-    contrapaso_count: increment(contrapasoCountBlue ?? 0),
-    clean_exchanges_won: increment(cleanExchangesBlue ?? 0),
-    total_valid_exchanges: increment(totalValidExchanges ?? 0),
-    hand_hits_landed: increment(handHitsBlue ?? 0),
-    double_hit_count: increment(doubleHitCount ?? 0),
-    wins_espada_larga: increment(espadaLargaWin(winnerId, fighterBlueId, weaponName)),
+    points_lost_defense: increment(lbSnapshot.blue.points_lost_defense),
+    clean_hand_hits: increment(lbSnapshot.blue.clean_hand_hits),
+    clean_body_hits: increment(lbSnapshot.blue.clean_body_hits),
+    clean_head_hits: increment(lbSnapshot.blue.clean_head_hits),
+    points_rescued_contrapaso: increment(lbSnapshot.blue.points_rescued_contrapaso),
+    contrapaso_count: increment(lbSnapshot.blue.contrapaso_count),
+    clean_exchanges_won: increment(lbSnapshot.blue.clean_exchanges_won),
+    total_valid_exchanges: increment(lbSnapshot.blue.total_valid_exchanges),
+    hand_hits_landed: increment(lbSnapshot.blue.hand_hits_landed),
+    double_hit_count: increment(lbSnapshot.blue.double_hit_count),
+    wins_espada_larga: increment(lbSnapshot.blue.wins_espada_larga),
   })
 
   await batch.commit()
@@ -212,6 +248,22 @@ export async function overrideMatch(matchId, {
 }) {
   const batch = writeBatch(db)
 
+  const wldRed = winnerId === fighterRedId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
+  const wldBlue = winnerId === fighterBlueId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
+
+  const lbSnapshot = {
+    red: {
+      total_points: Math.round(finalScoreRed * 100) / 100,
+      wld: wldRed,
+      wins_espada_larga: espadaLargaWin(winnerId, fighterRedId, weaponName),
+    },
+    blue: {
+      total_points: Math.round(finalScoreBlue * 100) / 100,
+      wld: wldBlue,
+      wins_espada_larga: espadaLargaWin(winnerId, fighterBlueId, weaponName),
+    },
+  }
+
   batch.update(doc(db, 'matches', matchId), {
     status: 'complete',
     final_score_red: finalScoreRed,
@@ -222,26 +274,83 @@ export async function overrideMatch(matchId, {
     override: true,
     override_note: overrideNote,
     overridden_at: serverTimestamp(),
+    _lb_snapshot: lbSnapshot,
   })
 
-  const wldRed = winnerId === fighterRedId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
-  const wldBlue = winnerId === fighterBlueId ? 'matches_won' : winnerId === 'draw' ? 'matches_drawn' : 'matches_lost'
-
   batch.update(doc(db, 'leaderboard', fighterRedId), {
-    total_points: increment(Math.round(finalScoreRed * 100) / 100),
+    total_points: increment(lbSnapshot.red.total_points),
     matches_complete: increment(1),
     [wldRed]: increment(1),
-    wins_espada_larga: increment(espadaLargaWin(winnerId, fighterRedId, weaponName)),
+    wins_espada_larga: increment(lbSnapshot.red.wins_espada_larga),
   })
 
   batch.update(doc(db, 'leaderboard', fighterBlueId), {
-    total_points: increment(Math.round(finalScoreBlue * 100) / 100),
+    total_points: increment(lbSnapshot.blue.total_points),
     matches_complete: increment(1),
     [wldBlue]: increment(1),
-    wins_espada_larga: increment(espadaLargaWin(winnerId, fighterBlueId, weaponName)),
+    wins_espada_larga: increment(lbSnapshot.blue.wins_espada_larga),
   })
 
   await batch.commit()
+}
+
+export async function reopenMatch(matchId) {
+  const matchDoc = await getDoc(doc(db, 'matches', matchId))
+  if (!matchDoc.exists()) throw new Error('Match not found')
+  const match = matchDoc.data()
+  if (match.status !== 'complete') return
+
+  const snap = match._lb_snapshot
+  const batch = writeBatch(db)
+
+  if (snap) {
+    for (const [side, fighterId] of [['red', match.fighter_red_id], ['blue', match.fighter_blue_id]]) {
+      const s = snap[side]
+      const updates = {
+        total_points: increment(-s.total_points),
+        matches_complete: increment(-1),
+        [s.wld]: increment(-1),
+        wins_espada_larga: increment(-(s.wins_espada_larga ?? 0)),
+      }
+      if (s.points_lost_defense != null) {
+        Object.assign(updates, {
+          points_lost_defense: increment(-s.points_lost_defense),
+          clean_hand_hits: increment(-s.clean_hand_hits),
+          clean_body_hits: increment(-s.clean_body_hits),
+          clean_head_hits: increment(-s.clean_head_hits),
+          points_rescued_contrapaso: increment(-s.points_rescued_contrapaso),
+          contrapaso_count: increment(-s.contrapaso_count),
+          clean_exchanges_won: increment(-s.clean_exchanges_won),
+          total_valid_exchanges: increment(-s.total_valid_exchanges),
+          hand_hits_landed: increment(-s.hand_hits_landed),
+          double_hit_count: increment(-s.double_hit_count),
+        })
+      }
+      batch.update(doc(db, 'leaderboard', fighterId), updates)
+    }
+  }
+
+  batch.update(doc(db, 'matches', matchId), {
+    status: 'active',
+    final_score_red: null,
+    final_score_blue: null,
+    winner_id: null,
+    ended_early: false,
+    ended_by_depletion: false,
+    ended_by_red_card: false,
+    red_carded_fighter: null,
+    calibration_pending: false,
+    override: false,
+    override_note: null,
+    _lb_snapshot: null,
+  })
+
+  await batch.commit()
+
+  const exSnap = await getDocs(exchangesRef(matchId))
+  const delBatch = writeBatch(db)
+  exSnap.docs.forEach((d) => delBatch.delete(d.ref))
+  if (!exSnap.empty) await delBatch.commit()
 }
 
 // ── Generación de ronda ───────────────────────────────────────────────────────
@@ -473,7 +582,7 @@ export async function addStaffMember({ name, club, role, tier }) {
   const ref = await addDoc(fightersRef, { name, club: effectiveClub, tier: effectiveTier, role: role || 'both' })
   await setDoc(doc(db, 'leaderboard', ref.id), {
     fighter_id: ref.id, name, club: effectiveClub,
-    total_points: 0, rounds_played: 0, matches_complete: 0, bye_count: 0,
+    total_points: 0, matches_complete: 0, bye_count: 0,
     points_lost_defense: 0, clean_head_hits: 0, points_rescued_contrapaso: 0,
     wins_espada_larga: 0, matches_won: 0, matches_lost: 0, matches_drawn: 0,
     hand_hits_landed: 0, double_hit_count: 0, contrapaso_count: 0,
@@ -496,4 +605,47 @@ export async function resumeEvent() {
 
 export async function setEventStatus(status) {
   await setDoc(doc(db, 'config', 'event'), { status, break_ends_at: null }, { merge: true })
+}
+
+export async function resetTournament() {
+  const matchSnap = await getDocs(matchesRef)
+  for (const d of matchSnap.docs) {
+    const exSnap = await getDocs(exchangesRef(d.id))
+    const b = writeBatch(db)
+    exSnap.docs.forEach((e) => b.delete(e.ref))
+    if (!exSnap.empty) await b.commit()
+  }
+
+  const delCollections = [matchesRef, roundsRef, byesRef, controlStatsRef]
+  for (const colRef of delCollections) {
+    const snap = await getDocs(colRef)
+    if (snap.empty) continue
+    const b = writeBatch(db)
+    snap.docs.forEach((d) => b.delete(d.ref))
+    await b.commit()
+  }
+
+  const lbSnap = await getDocs(leaderboardRef)
+  const delBatch = writeBatch(db)
+  lbSnap.docs.forEach((d) => delBatch.delete(d.ref))
+  await delBatch.commit()
+
+  const createBatch = writeBatch(db)
+  for (const d of lbSnap.docs) {
+    const data = d.data()
+    createBatch.set(d.ref, {
+      fighter_id: d.id, name: data.name, club: data.club,
+      total_points: 0, matches_complete: 0, bye_count: 0,
+      points_lost_defense: 0, clean_head_hits: 0, points_rescued_contrapaso: 0,
+      wins_espada_larga: 0, matches_won: 0, matches_lost: 0, matches_drawn: 0,
+      hand_hits_landed: 0, double_hit_count: 0, contrapaso_count: 0,
+      clean_hand_hits: 0, clean_body_hits: 0, clean_exchanges_won: 0, total_valid_exchanges: 0,
+    })
+  }
+  await createBatch.commit()
+
+  await setDoc(doc(db, 'config', 'event'), {
+    status: 'active', break_ends_at: null,
+    current_round: 0, arenas: 3,
+  }, { merge: true })
 }

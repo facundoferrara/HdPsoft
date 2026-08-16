@@ -21,6 +21,7 @@ dist/
 .firebase/
 firebase-debug.log
 firestore-debug.log
+firebase-export.json
 
 # Firebase functions local
 functions/node_modules/

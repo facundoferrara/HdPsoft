@@ -60,12 +60,7 @@
   font-size: 1.8vh;
   padding: 0.5vh 0.5vw;
   border-radius: 0.5vh;
-  background: rgba(255, 255, 255, 0.03);
   animation: staggerIn 0.4s ease-out both;
-}
-
-.row:nth-child(1) {
-  background: rgba(200, 165, 90, 0.08);
 }
 
 @keyframes staggerIn {
@@ -80,13 +75,28 @@
   text-align: center;
 }
 
+.nameBlock {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .name {
   font-weight: 700;
-  color: #d8dce6;
+  color: #c8a55a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 1.8vh;
+}
+
+.club {
+  font-size: 1.2vh;
+  color: #ffffff;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .value {
@@ -105,13 +115,19 @@
 }
 
 .unqualified {
-  opacity: 0.35;
+  opacity: 0.55;
 }
 
-.unqualified .rank,
-.unqualified .name,
+.unqualified .rank {
+  color: #c8a55a;
+}
+
+.unqualified .name {
+  color: #e8ecf2;
+}
+
 .unqualified .value {
-  color: #4a5478;
+  color: #7a82a0;
 }
 
 .empty {

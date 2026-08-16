@@ -3,5 +3,15 @@
     "staging": "hojasdeplatastaging",
     "production": "REEMPLAZAR_CON_PROJECT_ID_PRODUCCION",
     "default": "hojasdeplatastaging"
-  }
+  },
+  "targets": {
+    "hojasdeplatastaging": {
+      "hosting": {
+        "prod": [
+          "hojasdeplata"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

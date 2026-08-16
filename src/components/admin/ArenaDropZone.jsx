@@ -28,7 +28,12 @@ export default function ArenaDropZone({ arena, activeMatch, fightersMap, onArena
       ].filter(Boolean).join(' ')}
       onClick={() => onArenaClick?.(arena)}
     >
-      <div className={styles.label}>Arena {arena}</div>
+      <div className={styles.header}>
+        <div className={styles.label}>Arena {arena}</div>
+        {activeMatch?.match_number != null && (
+          <span className={styles.matchNum}>#{activeMatch.match_number}</span>
+        )}
+      </div>
       {activeMatch ? (
         <div className={styles.matchInfo}>
           <span className={styles.tier}>{activeMatch.match_tier?.toUpperCase()}</span>

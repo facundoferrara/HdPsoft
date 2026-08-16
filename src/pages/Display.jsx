@@ -3,8 +3,10 @@ import Leaderboard from '../components/display/Leaderboard'
 import Carousel from '../components/display/Carousel'
 import PairedStats from '../components/display/PairedStats'
 import TopTenGrid from '../components/display/TopTenGrid'
+import ArenaStatus from '../components/display/ArenaStatus'
 import { useEventStatus } from '../hooks/useEventStatus'
 import { useLeaderboard } from '../hooks/useLeaderboard'
+import { useActiveMatches } from '../hooks/useMatches'
 import styles from './Display.module.css'
 
 const fmt = (v) => v.toFixed(2)
@@ -19,21 +21,21 @@ function buildTriads(entries) {
         subtitle: 'Golpes limpios / asalto',
         entries: entries.map((e) => ({ ...e, value: (e.clean_head_hits ?? 0) / mc(e), total: e.clean_head_hits ?? 0 })),
         format: fmt,
-        formatSecondary: (e) => `(${e.total})`,
+        formatSecondary: (e) => `(${e.total}/${e.matches_complete ?? 1})`,
       },
       center: {
         title: 'Cuerpo',
         subtitle: 'Golpes limpios / asalto',
         entries: entries.map((e) => ({ ...e, value: (e.clean_body_hits ?? 0) / mc(e), total: e.clean_body_hits ?? 0 })),
         format: fmt,
-        formatSecondary: (e) => `(${e.total})`,
+        formatSecondary: (e) => `(${e.total}/${e.matches_complete ?? 1})`,
       },
       right: {
         title: 'Manos',
         subtitle: 'Golpes limpios / asalto',
         entries: entries.map((e) => ({ ...e, value: (e.clean_hand_hits ?? 0) / mc(e), total: e.clean_hand_hits ?? 0 })),
         format: fmt,
-        formatSecondary: (e) => `(${e.total})`,
+        formatSecondary: (e) => `(${e.total}/${e.matches_complete ?? 1})`,
       },
     },
     {
@@ -57,10 +59,10 @@ function buildTriads(entries) {
       },
       right: {
         title: 'Pulcritud',
-        subtitle: 'Intercambios sin dobles',
+        subtitle: 'Sin dobles ni contrapasos',
         entries: entries.map((e) => ({
           ...e,
-          value: Math.max(0, 1 - (e.double_hit_count ?? 0) / mc(e) / 3),
+          value: Math.max(0, 1 - ((e.double_hit_count ?? 0) + (e.contrapaso_count ?? 0)) / (e.total_valid_exchanges || 1)),
         })),
         format: pct,
       },
@@ -71,14 +73,14 @@ function buildTriads(entries) {
         subtitle: 'Via contrapaso / asalto',
         entries: entries.map((e) => ({ ...e, value: (e.points_rescued_contrapaso ?? 0) / mc(e), total: e.points_rescued_contrapaso ?? 0 })),
         format: fmt,
-        formatSecondary: (e) => `(${e.total})`,
+        formatSecondary: (e) => `(${e.total}/${e.matches_complete ?? 1})`,
       },
       center: {
         title: 'Contrapasos',
         subtitle: 'Exitosos / asalto',
         entries: entries.map((e) => ({ ...e, value: (e.contrapaso_count ?? 0) / mc(e), total: e.contrapaso_count ?? 0 })),
         format: fmt,
-        formatSecondary: (e) => `(${e.total})`,
+        formatSecondary: (e) => `(${e.total}/${e.matches_complete ?? 1})`,
       },
       right: {
         title: 'Golpes Limpios',
@@ -89,7 +91,7 @@ function buildTriads(entries) {
           total: (e.clean_hand_hits ?? 0) + (e.clean_body_hits ?? 0) + (e.clean_head_hits ?? 0),
         })),
         format: fmt,
-        formatSecondary: (e) => `(${e.total})`,
+        formatSecondary: (e) => `(${e.total}/${e.matches_complete ?? 1})`,
       },
     },
   ]
@@ -127,6 +129,7 @@ function BreakBanner({ eventStatus }) {
 export default function Display() {
   const { eventStatus, loading } = useEventStatus()
   const { leaderboard } = useLeaderboard()
+  const activeMatches = useActiveMatches()
   const [summaryMode, setSummaryMode] = useState(false)
 
   const isFinished = eventStatus?.status === 'finished'
@@ -161,16 +164,21 @@ export default function Display() {
 
       {summaryMode ? (
         <div className={styles.summaryLayout}>
-          <div className={styles.summaryHeader}>
-            <h2 className={styles.summaryTitle}>Top 10</h2>
-          </div>
-          <div className={styles.summaryContent}>
-            <Carousel intervalMs={30000} onCycleComplete={handleCycleComplete}>
-              {statTriads.map((triad, i) => (
-                <TopTenGrid key={i} top10={top10} triad={triad} />
-              ))}
-            </Carousel>
-          </div>
+          <section className={styles.summaryLeft}>
+            <ArenaStatus matches={activeMatches} />
+          </section>
+          <section className={styles.summaryRight}>
+            <div className={styles.summaryHeader}>
+              <h2 className={styles.summaryTitle}>Top 10</h2>
+            </div>
+            <div className={styles.summaryContent}>
+              <Carousel intervalMs={30000} onCycleComplete={handleCycleComplete}>
+                {statTriads.map((triad, i) => (
+                  <TopTenGrid key={i} top10={top10} triad={triad} />
+                ))}
+              </Carousel>
+            </div>
+          </section>
         </div>
       ) : (
         <div className={styles.columns}>

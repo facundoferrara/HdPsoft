@@ -56,19 +56,6 @@ export function calcDouble(zoneRed, zoneBlue, pointsRed, pointsBlue, zoneValues)
 }
 
 /**
- * Calcula la transferencia por desarme autoinfligido.
- *
- * @param {number|null} priorHitValue  — valor del golpe previo en el intercambio (null si no hubo)
- * @param {number} selfDisarmBase      — de config.self_disarm_base
- * @param {number} opponentCurrentPoints
- * @returns {number} puntos a transferir al oponente
- */
-export function calcSelfDisarm(priorHitValue, selfDisarmBase, opponentCurrentPoints) {
-  const transfer = Math.max(priorHitValue ?? 0, selfDisarmBase)
-  return Math.min(transfer, opponentCurrentPoints)
-}
-
-/**
  * Calcula puntos de presa mutua (ambos pierden el valor de presa, sin transferencia).
  *
  * @param {number} pointsRed

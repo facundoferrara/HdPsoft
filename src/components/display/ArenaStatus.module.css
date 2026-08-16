@@ -1,63 +1,101 @@
-.banner {
+.panel {
   display: flex;
-  width: 100%;
+  flex-direction: column;
+  height: 100%;
+  padding: 2vh 1.5vw;
+  box-sizing: border-box;
+}
+
+.panelTitle {
+  font-family: 'DM Serif Display', serif;
+  font-size: 4vh;
+  font-weight: 400;
+  color: #c8a55a;
+  text-align: center;
+  margin: 0 0 2vh;
+}
+
+.arenas {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 2vh;
 }
 
 .arena {
   flex: 1;
   display: flex;
-  align-items: center;
-  gap: 1.5vw;
-  padding: 1.5vh 1.5vw;
+  flex-direction: column;
+  padding: 2vh 1.5vw;
+  border-radius: 0.8vh;
   background: rgba(255, 255, 255, 0.02);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.arena:last-child {
-  border-right: none;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .arena.active {
   background: rgba(106, 183, 212, 0.06);
+  border-color: rgba(106, 183, 212, 0.15);
 }
 
 .arenaLabel {
   font-family: 'DM Serif Display', serif;
-  font-size: 1.8vh;
+  font-size: 2.8vh;
   color: #4a6a8a;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  white-space: nowrap;
+  margin-bottom: 1.5vh;
 }
 
 .active .arenaLabel {
   color: #6ab7d4;
 }
 
-.matchInfo {
+.fighters {
   display: flex;
-  align-items: center;
-  gap: 0.8vw;
-  font-size: 2vh;
-  font-weight: 700;
+  flex-direction: column;
+  gap: 1vh;
+  flex: 1;
+  justify-content: center;
+}
+
+.fighter {
+  display: flex;
+  flex-direction: column;
+  padding: 1vh 1vw;
+  border-radius: 0.5vh;
 }
 
 .red {
+  font-size: 2.4vh;
+  font-weight: 700;
   color: #e57373;
 }
 
 .blue {
+  font-size: 2.4vh;
+  font-weight: 700;
   color: #64b5f6;
 }
 
 .vs {
-  font-size: 1.5vh;
+  font-size: 1.8vh;
   color: #4a6a8a;
-  font-weight: 400;
+  text-align: center;
+  font-style: italic;
+}
+
+.club {
+  font-size: 1.4vh;
+  color: #7a82a0;
+  font-style: italic;
 }
 
 .idleLabel {
-  font-size: 1.8vh;
+  font-size: 2.4vh;
   color: #3a5a7a;
   font-style: italic;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
