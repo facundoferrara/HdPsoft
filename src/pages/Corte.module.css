@@ -24,12 +24,26 @@
   margin: 0 0 4vh;
 }
 
+.cols {
+  display: flex;
+  gap: 2vw;
+  width: 100%;
+  max-width: 1200px;
+  align-items: flex-start;
+}
+
+@media (max-width: 640px) {
+  .cols {
+    flex-direction: column;
+    gap: 1vh;
+  }
+}
+
 .list {
   list-style: none;
   padding: 0;
   margin: 0;
-  width: 100%;
-  max-width: 800px;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 1vh;
@@ -37,13 +51,20 @@
 
 .row {
   display: grid;
-  grid-template-columns: 5vw 1fr auto;
+  grid-template-columns: 3.5vw 1fr auto;
   align-items: center;
-  gap: 1.2vw;
-  font-size: 2.8vh;
-  padding: 1.4vh 1.5vw;
-  border-radius: 0.6vh;
+  gap: 0.8vw;
+  font-size: 2.2vh;
+  padding: 0.9vh 1vw;
+  border-radius: 0.5vh;
   animation: staggerIn 0.4s ease-out both;
+}
+
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: 8vw 1fr auto;
+    gap: 2vw;
+  }
 }
 
 @keyframes staggerIn {
@@ -53,7 +74,7 @@
 
 .rank {
   font-family: 'DM Serif Display', serif;
-  font-size: 4.5vh;
+  font-size: 3vh;
   color: #c8a55a;
   text-align: center;
 }
@@ -71,7 +92,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 2.8vh;
+  font-size: 2.2vh;
 }
 
 .meta {
@@ -91,11 +112,15 @@
 
 .score {
   font-family: 'DM Serif Display', serif;
-  font-size: 4vh;
+  font-size: 2.8vh;
   font-variant-numeric: tabular-nums;
-  min-width: 5vw;
+  min-width: 4vw;
   text-align: right;
   color: #c0c8d8;
+}
+
+.unscored {
+  opacity: 0.5;
 }
 
 .empty {
