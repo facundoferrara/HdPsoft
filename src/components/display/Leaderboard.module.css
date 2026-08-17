@@ -1,9 +1,24 @@
 .container {
   display: flex;
   flex-direction: column;
-  padding: 2.5vh 1.5vw;
+  padding: 2vh 2vw;
   height: 100%;
   box-sizing: border-box;
+}
+
+.cols {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 1.5vw;
+}
+
+@media (max-width: 640px) {
+  .cols {
+    flex-direction: column;
+    overflow-y: auto;
+    gap: 0.5vh;
+  }
 }
 
 .title {
@@ -23,11 +38,24 @@
   list-style: none;
   padding: 0;
   margin: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  justify-content: space-between;
-  gap: 0.6vh;
+  gap: 0.45vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200, 165, 90, 0.25) transparent;
+}
+
+.list::-webkit-scrollbar { width: 3px; }
+.list::-webkit-scrollbar-track { background: transparent; }
+.list::-webkit-scrollbar-thumb { background: rgba(200, 165, 90, 0.25); border-radius: 2px; }
+
+@media (max-width: 640px) {
+  .list {
+    flex: none;
+    overflow-y: visible;
+  }
 }
 
 .row {
@@ -35,10 +63,10 @@
   grid-template-columns: 3.5vw 1fr auto;
   align-items: center;
   gap: 0.8vw;
-  font-size: 2.4vh;
-  padding: 1vh 1vw;
+  font-size: 2.2vh;
+  padding: 0.7vh 1vw;
   border-radius: 0.5vh;
-  animation: staggerIn 0.4s ease-out both;
+  flex-shrink: 0;
 }
 
 @keyframes staggerIn {

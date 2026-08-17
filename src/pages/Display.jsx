@@ -1,12 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Leaderboard from '../components/display/Leaderboard'
 import Carousel from '../components/display/Carousel'
 import PairedStats from '../components/display/PairedStats'
-import TopTenGrid from '../components/display/TopTenGrid'
-import ArenaStatus from '../components/display/ArenaStatus'
 import { useEventStatus } from '../hooks/useEventStatus'
 import { useLeaderboard } from '../hooks/useLeaderboard'
-import { useActiveMatches } from '../hooks/useMatches'
+import { useFighters } from '../hooks/useFighters'
 import styles from './Display.module.css'
 
 const fmt = (v) => v.toFixed(2)
@@ -129,8 +127,7 @@ function BreakBanner({ eventStatus }) {
 export default function Display() {
   const { eventStatus, loading } = useEventStatus()
   const { leaderboard } = useLeaderboard()
-  const activeMatches = useActiveMatches()
-  const [summaryMode, setSummaryMode] = useState(false)
+  const { fightersMap } = useFighters()
 
   const isFinished = eventStatus?.status === 'finished'
 
@@ -138,62 +135,30 @@ export default function Display() {
   const withMatches = useMemo(
     () => leaderboard
       .filter((e) => (e.matches_complete ?? 0) > 0)
-      .map((e) => ({ ...e, qualified: (e.matches_complete ?? 0) >= MIN_MATCHES })),
-    [leaderboard],
-  )
-
-  const top10 = useMemo(
-    () => leaderboard.slice(0, 10).filter((e) => (e.matches_complete ?? 0) > 0),
-    [leaderboard],
+      .map((e) => ({
+        ...e,
+        club: fightersMap[e.id]?.club ?? e.club,
+        qualified: (e.matches_complete ?? 0) >= MIN_MATCHES,
+      })),
+    [leaderboard, fightersMap],
   )
 
   const statTriads = useMemo(() => buildTriads(withMatches), [withMatches])
-
-  const handleCycleComplete = useCallback(() => {
-    setSummaryMode((prev) => !prev)
-  }, [])
 
   if (loading) return <div className={styles.loading}>Conectando…</div>
 
   return (
     <div className={styles.page}>
-
       {isFinished && (
-        <div className={styles.finishedBanner}>Torneo finalizado</div>
+        <div className={styles.finishedBanner}>Torneo finalizado — Hojas de Plata 2026</div>
       )}
 
-      {summaryMode ? (
-        <div className={styles.summaryLayout}>
-          <section className={styles.summaryLeft}>
-            <ArenaStatus matches={activeMatches} />
-          </section>
-          <section className={styles.summaryRight}>
-            <div className={styles.summaryHeader}>
-              <h2 className={styles.summaryTitle}>Top 10</h2>
-            </div>
-            <div className={styles.summaryContent}>
-              <Carousel intervalMs={30000} onCycleComplete={handleCycleComplete}>
-                {statTriads.map((triad, i) => (
-                  <TopTenGrid key={i} top10={top10} triad={triad} />
-                ))}
-              </Carousel>
-            </div>
-          </section>
-        </div>
-      ) : (
-        <div className={styles.columns}>
-          <section className={styles.left}>
-            <Leaderboard />
-          </section>
-          <section className={styles.right}>
-            <Carousel intervalMs={30000} onCycleComplete={handleCycleComplete}>
-              {statTriads.map((triad, i) => (
-                <PairedStats key={i} left={triad.left} center={triad.center} right={triad.right} />
-              ))}
-            </Carousel>
-          </section>
-        </div>
-      )}
+      <Carousel paused={true}>
+        <Leaderboard />
+        {statTriads.map((triad, i) => (
+          <PairedStats key={i} left={triad.left} center={triad.center} right={triad.right} />
+        ))}
+      </Carousel>
 
       <BreakBanner eventStatus={eventStatus} />
     </div>
